@@ -15,14 +15,13 @@ function PlayerCard({ player, side, label }: { player: PublicPlayer; side: "left
     >
       <div
         className={cn(
-          "relative rounded-full p-1.5",
-          side === "left" ? "bg-you/30 shadow-[0_0_60px_-10px_var(--you)]" : "bg-rival/30 shadow-[0_0_60px_-10px_var(--rival)]",
+          "relative rounded-full border p-1.5",
         )}
       >
         <PlayerAvatar player={player} className="size-28 text-3xl md:size-36" />
       </div>
       <div className={cn("text-center", side === "left" ? "md:text-right" : "md:text-left")}>
-        <div className={cn("text-xs font-bold tracking-[0.3em] uppercase", side === "left" ? "text-you" : "text-rival")}>
+        <div className="text-muted-foreground text-xs font-medium tracking-[0.3em] uppercase">
           {label}
         </div>
         <div className="mt-1 max-w-56 truncate text-2xl font-bold">{player.name}</div>
@@ -50,14 +49,6 @@ export function VersusIntro() {
       transition={{ duration: 0.35 }}
       className="relative flex min-h-[75svh] flex-col items-center justify-center overflow-hidden"
     >
-      {/* Diagonaler Lichtblitz beim Aufeinandertreffen */}
-      <motion.div
-        className="pointer-events-none absolute inset-y-0 left-1/2 w-40 -translate-x-1/2 bg-gradient-to-b from-transparent via-white/20 to-transparent"
-        initial={{ opacity: 0, scaleY: 0, rotate: 18 }}
-        animate={{ opacity: [0, 1, 0], scaleY: [0, 1.4, 1.4] }}
-        transition={{ delay: 0.55, duration: 0.7 }}
-      />
-
       <div className="text-muted-foreground mb-10 text-sm font-semibold tracking-[0.4em] uppercase">
         <motion.span initial={{ opacity: 0, letterSpacing: "1em" }} animate={{ opacity: 1, letterSpacing: "0.4em" }}>
           Gegner gefunden
@@ -72,7 +63,7 @@ export function VersusIntro() {
           transition={{ type: "spring", stiffness: 260, damping: 14, delay: 0.55 }}
           className="relative shrink-0 px-6"
         >
-          <span className="from-you to-rival bg-gradient-to-br bg-clip-text text-7xl font-black text-transparent italic drop-shadow-[0_0_30px_rgba(167,139,250,0.4)] md:text-8xl">
+          <span className="text-6xl font-black italic md:text-7xl">
             VS
           </span>
         </motion.div>

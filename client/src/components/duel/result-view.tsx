@@ -26,9 +26,9 @@ function AnimatedNumber({ from, to, delay = 0 }: { from: number; to: number; del
 }
 
 const HEADLINES = {
-  win: { text: "Sieg!", className: "from-emerald-300 via-success to-teal-200" },
-  loss: { text: "Niederlage", className: "from-rose-300 via-danger to-orange-300" },
-  draw: { text: "Unentschieden", className: "from-zinc-200 via-zinc-400 to-zinc-200" },
+  win: { text: "Sieg", className: "text-success glow-text-success" },
+  loss: { text: "Niederlage", className: "text-danger glow-text-danger" },
+  draw: { text: "Unentschieden", className: "text-foreground" },
 };
 
 export function ResultView() {
@@ -68,7 +68,7 @@ export function ResultView() {
           animate={{ scale: 1, opacity: 1, rotate: 0 }}
           transition={{ type: "spring", stiffness: 220, damping: 12 }}
           className={cn(
-            "bg-gradient-to-r bg-clip-text pb-2 text-6xl font-black tracking-tight text-transparent md:text-7xl",
+            "pb-2 text-6xl font-black tracking-tight md:text-7xl",
             headline.className,
           )}
         >
@@ -89,15 +89,15 @@ export function ResultView() {
       >
         <Card className="flex-row items-center justify-between gap-4 px-6 py-6 md:px-10">
           {[
-            { player: match.you, score: result.you.score, color: "text-you", label: "Du" },
+            { player: match.you, score: result.you.score, color: "text-foreground", label: "Du" },
             null,
-            { player: match.opponent, score: result.opponent.score, color: "text-rival", label: "Gegner" },
+            { player: match.opponent, score: result.opponent.score, color: "text-muted-foreground", label: "Gegner" },
           ].map((item, i) =>
             item ? (
               <div key={i} className="flex min-w-0 flex-1 flex-col items-center gap-2">
                 <PlayerAvatar player={item.player} className="size-14" />
                 <div className="max-w-full truncate text-sm font-medium">{item.player.name}</div>
-                <div className={cn("font-mono text-5xl font-black tabular-nums", item.color)}>
+                <div className={cn("font-mono text-5xl font-bold tabular-nums", item.color)}>
                   <AnimatedNumber from={0} to={item.score} delay={0.4} />
                 </div>
               </div>
@@ -154,7 +154,7 @@ export function ResultView() {
         transition={{ delay: 0.7 }}
         className="flex flex-wrap justify-center gap-3"
       >
-        <Button size="lg" onClick={() => joinQueue(DEFAULT_MODE)} className="shadow-lg shadow-primary/30">
+        <Button size="lg" onClick={() => joinQueue(DEFAULT_MODE)}>
           <RotateCcw /> Nächstes Duell
         </Button>
         <Button

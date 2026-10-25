@@ -27,7 +27,7 @@ const NAV = [
 export function Logo({ className }: { className?: string }) {
   return (
     <span className={cn("flex items-center gap-2 font-bold tracking-tight", className)}>
-      <span className="bg-primary/15 text-primary ring-primary/30 grid size-8 place-items-center rounded-lg ring-1">
+      <span className="bg-primary text-primary-foreground grid size-8 place-items-center rounded-lg">
         <Swords className="size-4" />
       </span>
       <span>
@@ -45,10 +45,10 @@ export function AppLayout() {
   const inGame = state.phase === "intro" || state.phase === "playing";
 
   return (
-    <div className="app-bg min-h-svh overflow-x-clip">
+    <div className="min-h-svh overflow-x-clip">
       <header
         className={cn(
-          "bg-background/70 sticky top-0 z-40 border-b backdrop-blur-xl transition-opacity",
+          "bg-background/80 sticky top-0 z-40 border-b backdrop-blur transition-opacity",
           inGame && "pointer-events-none opacity-40",
         )}
       >

@@ -10,7 +10,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
-const PODIUM = ["text-amber-300", "text-zinc-300", "text-orange-400"];
+const PODIUM = ["text-foreground", "text-muted-foreground", "text-muted-foreground"];
 
 export function LeaderboardPage() {
   const { user } = useAuth();
@@ -76,7 +76,7 @@ export function LeaderboardPage() {
               </TableHeader>
               <TableBody>
                 {data?.map((e) => (
-                  <TableRow key={e.player.id} className={cn(e.player.id === user?.id && "bg-primary/10 hover:bg-primary/15")}>
+                  <TableRow key={e.player.id} className={cn(e.player.id === user?.id && "bg-muted/60 hover:bg-muted")}>
                     <TableCell className={cn("font-mono font-semibold", PODIUM[e.rank - 1])}>{e.rank}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">

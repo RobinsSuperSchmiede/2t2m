@@ -2,7 +2,6 @@ import { getTier, tierProgress, type PublicPlayer } from "@2t2m/shared";
 import { Crown, Shield } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { TIER_STYLES } from "@/lib/tiers";
 import { cn } from "@/lib/utils";
 
 export function initials(name: string) {
@@ -24,7 +23,7 @@ export function PlayerAvatar({
   return (
     <Avatar className={className}>
       {player.avatarUrl && <AvatarImage src={player.avatarUrl} alt={player.name} referrerPolicy="no-referrer" />}
-      <AvatarFallback className="bg-gradient-to-br from-primary/40 to-primary/10 font-semibold">
+      <AvatarFallback className="bg-muted font-semibold">
         {initials(player.name)}
       </AvatarFallback>
     </Avatar>
@@ -33,21 +32,17 @@ export function PlayerAvatar({
 
 export function RankBadge({ rating, className, showRating = true }: { rating: number; className?: string; showRating?: boolean }) {
   const tier = getTier(rating);
-  const style = TIER_STYLES[tier.id];
   const Icon = tier.id === "master" || tier.id === "grandmaster" ? Crown : Shield;
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset",
-        style.text,
-        style.bg,
-        style.ring,
+        "text-foreground inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium",
         className,
       )}
     >
       <Icon className="size-3.5" />
       {tier.name}
-      {showRating && <span className="font-mono opacity-80">{rating}</span>}
+      {showRating && <span className="text-muted-foreground font-mono">{rating}</span>}
     </span>
   );
 }

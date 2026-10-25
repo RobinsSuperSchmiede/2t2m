@@ -25,7 +25,7 @@ export function LoginPage() {
   const [devName, setDevName] = useState("");
 
   return (
-    <div className="app-bg grid min-h-svh place-items-center px-4 py-12">
+    <div className="grid min-h-svh place-items-center px-4 py-12">
       <div className="grid w-full max-w-5xl items-center gap-12 lg:grid-cols-2">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -37,9 +37,7 @@ export function LoginPage() {
           <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl">
             Fordere andere heraus.
             <br />
-            <span className="from-primary bg-gradient-to-r to-fuchsia-400 bg-clip-text text-transparent">
-              Steig in der Rangliste auf.
-            </span>
+            <span className="text-muted-foreground">Steig in der Rangliste auf.</span>
           </h1>
           <p className="text-muted-foreground max-w-md text-lg">
             Echtzeit-Duelle gegen Spieler auf deinem Niveau. Starte mit Geografie – weitere Themen folgen.
@@ -51,9 +49,9 @@ export function LoginPage() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 + i * 0.08 }}
-                className="bg-card/60 rounded-xl border p-4 backdrop-blur"
+                className="bg-card rounded-xl border p-4"
               >
-                <Icon className="text-primary mb-2 size-5" />
+                <Icon className="mb-2 size-5" />
                 <div className="font-semibold">{title}</div>
                 <div className="text-muted-foreground text-sm">{text}</div>
               </motion.div>
@@ -62,7 +60,7 @@ export function LoginPage() {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15 }}>
-          <Card className="mx-auto w-full max-w-sm shadow-2xl shadow-black/40">
+          <Card className="mx-auto w-full max-w-sm">
             <CardHeader className="text-center">
               <CardTitle className="text-2xl">Willkommen</CardTitle>
               <CardDescription>Melde dich an, um dein erstes Duell zu starten.</CardDescription>

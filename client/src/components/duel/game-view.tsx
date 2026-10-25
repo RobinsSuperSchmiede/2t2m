@@ -13,10 +13,10 @@ function ScoreBlock({ player, score, side }: { player: PublicPlayer; score: numb
     <div className={cn("flex min-w-0 flex-1 items-center gap-3", !isYou && "flex-row-reverse text-right")}>
       <PlayerAvatar
         player={player}
-        className={cn("size-11 ring-2 md:size-12", isYou ? "ring-you/60" : "ring-rival/60")}
+        className="size-11 md:size-12"
       />
       <div className="min-w-0">
-        <div className={cn("text-[10px] font-bold tracking-[0.25em] uppercase", isYou ? "text-you" : "text-rival")}>
+        <div className="text-muted-foreground text-[10px] font-medium tracking-[0.25em] uppercase">
           {isYou ? "Du" : "Gegner"}
         </div>
         <div className="truncate text-sm font-semibold">{player.name}</div>
@@ -29,7 +29,7 @@ function ScoreBlock({ player, score, side }: { player: PublicPlayer; score: numb
             animate={{ y: 0, scale: 1, opacity: 1 }}
             exit={{ y: -18, opacity: 0 }}
             transition={{ type: "spring", stiffness: 420, damping: 20 }}
-            className={cn("font-mono text-4xl font-black tabular-nums md:text-5xl", isYou ? "text-you" : "text-rival")}
+            className={cn("font-mono text-4xl font-bold tabular-nums md:text-5xl", !isYou && "text-muted-foreground")}
           >
             {score}
           </motion.div>
@@ -42,7 +42,7 @@ function ScoreBlock({ player, score, side }: { player: PublicPlayer; score: numb
                 initial={{ opacity: 1, y: 0 }}
                 animate={{ opacity: 0, y: -36 }}
                 transition={{ duration: 0.9 }}
-                className="text-rival pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 text-sm font-bold"
+                className="text-muted-foreground pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 text-sm font-bold"
               >
                 +1
               </motion.span>
@@ -58,9 +58,9 @@ function TugOfWar({ you, rival }: { you: number; rival: number }) {
   const total = you + rival;
   const share = total === 0 ? 50 : (you / total) * 100;
   return (
-    <div className="bg-rival/70 relative h-1.5 overflow-hidden rounded-full">
+    <div className="bg-muted-foreground/30 relative h-1 overflow-hidden rounded-full">
       <motion.div
-        className="bg-you absolute inset-y-0 left-0 rounded-full"
+        className="bg-foreground absolute inset-y-0 left-0 rounded-full"
         animate={{ width: `${share}%` }}
         transition={{ type: "spring", stiffness: 120, damping: 20 }}
       />
@@ -75,22 +75,22 @@ function QuestionImage({ question }: { question: Question }) {
         initial={{ rotateY: 90, opacity: 0 }}
         animate={{ rotateY: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 200, damping: 20 }}
-        className="flag-svg aspect-[3/2] w-full max-w-sm overflow-hidden rounded-lg shadow-2xl ring-1 shadow-black/50 ring-white/10"
+        className="flag-svg aspect-[3/2] w-full max-w-sm overflow-hidden rounded-md border"
         // Markup stammt vom eigenen Server (country-flag-icons), nicht von Nutzern.
         dangerouslySetInnerHTML={{ __html: question.image.markup }}
       />
     );
   }
   return (
-    <svg viewBox={question.image.viewBox} className="aspect-square h-full max-w-full drop-shadow-[0_0_24px_var(--primary)]">
+    <svg viewBox={question.image.viewBox} className="aspect-square h-full max-w-full">
       <motion.path
         d={question.image.d}
         initial={{ pathLength: 0, fillOpacity: 0 }}
-        animate={{ pathLength: 1, fillOpacity: 0.35 }}
+        animate={{ pathLength: 1, fillOpacity: 0.12 }}
         transition={{ pathLength: { duration: 0.6, ease: "easeInOut" }, fillOpacity: { delay: 0.3, duration: 0.4 } }}
-        fill="var(--primary)"
-        stroke="var(--primary)"
-        strokeWidth={2}
+        fill="var(--foreground)"
+        stroke="var(--foreground)"
+        strokeWidth={1.5}
         strokeLinejoin="round"
       />
     </svg>
@@ -167,7 +167,7 @@ export function GameView() {
               initial={{ scale: 0.3 }}
               animate={{ scale: 1.4 }}
               transition={{ type: "spring", stiffness: 260, damping: 12 }}
-              className="from-you to-rival bg-gradient-to-r bg-clip-text text-8xl font-black text-transparent italic"
+              className="text-8xl font-black italic"
             >
               LOS!
             </motion.span>
@@ -176,7 +176,7 @@ export function GameView() {
       </AnimatePresence>
 
       {/* Scoreboard */}
-      <div className="bg-card/80 space-y-3 rounded-2xl border p-4 backdrop-blur">
+      <div className="bg-card space-y-3 rounded-xl border p-4">
         <div className="flex items-center gap-4">
           <ScoreBlock player={match.you} score={state.score} side="you" />
           <motion.div
@@ -195,7 +195,7 @@ export function GameView() {
         <TugOfWar you={state.score} rival={state.opponentScore} />
         <div className="bg-muted h-1 overflow-hidden rounded-full">
           <div
-            className={cn("h-full rounded-full transition-[width] duration-100 ease-linear", critical ? "bg-danger" : "bg-primary")}
+            className={cn("h-full rounded-full transition-[width] duration-100 ease-linear", critical ? "bg-danger" : "bg-foreground")}
             style={{ width: `${(remaining / GAME_DURATION_MS) * 100}%` }}
           />
         </div>
@@ -211,7 +211,7 @@ export function GameView() {
               animate={{ opacity: 1, x: 0, ...(locked ? { x: [0, -10, 10, -6, 6, 0] } : {}) }}
               exit={{ opacity: 0, x: -60 }}
               transition={{ duration: 0.25 }}
-              className="bg-card/80 flex flex-col items-center gap-6 rounded-2xl border p-6 backdrop-blur md:p-8"
+              className="bg-card flex flex-col items-center gap-6 rounded-xl border p-6 md:p-8"
             >
               <div className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
                 {shown.kind === "flag" ? <Flag className="size-4" /> : <Map className="size-4" />}
@@ -238,11 +238,11 @@ export function GameView() {
                       disabled={selected !== null || timeUp}
                       onClick={() => choose(i)}
                       className={cn(
-                        "group flex h-14 items-center gap-3 rounded-xl border px-4 text-left font-medium transition-colors",
-                        "bg-background/60 hover:border-primary/60 hover:bg-primary/10 disabled:cursor-default",
-                        isSelected && !feedback && "border-primary bg-primary/15",
-                        isCorrect && "border-success bg-success/20 text-success hover:bg-success/20",
-                        isWrong && "border-danger bg-danger/20 text-danger hover:bg-danger/20",
+                        "group flex h-12 items-center gap-3 rounded-md border px-4 text-left text-sm font-medium shadow-xs transition-all",
+                        "bg-background hover:bg-accent dark:bg-input/30 dark:hover:bg-input/50 disabled:cursor-default",
+                        isSelected && !feedback && "border-foreground/40",
+                        isCorrect && "glow-success border-success bg-success/15 text-success hover:bg-success/15 dark:bg-success/15 dark:hover:bg-success/15",
+                        isWrong && "glow-danger border-danger bg-danger/15 text-danger hover:bg-danger/15 dark:bg-danger/15 dark:hover:bg-danger/15",
                         feedback && !isCorrect && !isWrong && "opacity-50",
                       )}
                     >

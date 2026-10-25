@@ -45,26 +45,20 @@ export function SearchingView() {
         {[0, 1, 2].map((i) => (
           <motion.span
             key={i}
-            className="border-primary/50 absolute inset-0 rounded-full border"
+            className="border-foreground/20 absolute inset-0 rounded-full border"
             initial={{ scale: 0.35, opacity: 0.9 }}
             animate={{ scale: 1.15, opacity: 0 }}
             transition={{ duration: 2.4, repeat: Infinity, delay: i * 0.8, ease: "easeOut" }}
           />
         ))}
-        <motion.span
-          className="absolute inset-6 rounded-full"
-          style={{ background: "conic-gradient(from 0deg, transparent 0deg, color-mix(in oklch, var(--primary) 35%, transparent) 60deg, transparent 90deg)" }}
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2.2, repeat: Infinity, ease: "linear" }}
-        />
-        <div className="bg-background ring-primary/40 relative rounded-full p-1.5 ring-2">
+        <div className="bg-background relative rounded-full border p-1.5">
           {user && <PlayerAvatar player={user} className="size-24 text-2xl" />}
         </div>
       </div>
 
       <div className="space-y-3">
         <h2 className="flex items-center justify-center gap-2 text-2xl font-bold">
-          <Loader2 className="text-primary size-5 animate-spin" /> Suche Gegner…
+          <Loader2 className="text-muted-foreground size-5 animate-spin" /> Suche Gegner…
         </h2>
         <div className="text-muted-foreground flex items-center justify-center gap-3 text-sm">
           <span className="font-mono text-foreground text-lg tabular-nums">{formatWait(waited)}</span>
@@ -83,7 +77,7 @@ export function SearchingView() {
           animate={{ opacity: 1, y: 0 }}
           className="text-muted-foreground mx-auto max-w-sm text-sm"
         >
-          💡 {TIPS[tip]}
+          {TIPS[tip]}
         </motion.p>
       </div>
 

@@ -24,7 +24,7 @@ const queryClient = new QueryClient({
 function FullscreenLoader() {
   return (
     <div className="grid min-h-svh place-items-center">
-      <Loader2 className="text-primary size-8 animate-spin" />
+      <Loader2 className="text-muted-foreground size-8 animate-spin" />
     </div>
   );
 }

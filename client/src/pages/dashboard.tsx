@@ -15,8 +15,6 @@ import { RankBadge, TierProgress } from "@/components/player";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useDuel } from "@/lib/duel";
-import { TIER_STYLES } from "@/lib/tiers";
-import { cn } from "@/lib/utils";
 
 const UPCOMING = [
   { icon: BookOpen, name: "Geschichte" },
@@ -121,7 +119,7 @@ export function DashboardPage() {
   return (
     <div className="space-y-8">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-3xl font-bold tracking-tight">Hallo {user?.name.split(" ")[0]} 👋</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Hallo {user?.name.split(" ")[0]}</h1>
         <p className="text-muted-foreground mt-1">Bereit für das nächste Duell?</p>
       </motion.div>
 
@@ -133,8 +131,7 @@ export function DashboardPage() {
           transition={{ delay: 0.05 }}
         >
           <Card className="relative h-full overflow-hidden">
-            <div className="from-primary/25 pointer-events-none absolute inset-0 bg-gradient-to-br via-transparent to-transparent" />
-            <Earth className="text-primary/10 pointer-events-none absolute -right-10 -bottom-12 size-72" strokeWidth={1} />
+            <Earth className="text-foreground/5 pointer-events-none absolute -right-10 -bottom-12 size-72" strokeWidth={1} />
             <CardHeader className="relative">
               <Badge variant="secondary" className="w-fit">
                 Geografie · Ranked
@@ -143,7 +140,7 @@ export function DashboardPage() {
               <CardDescription className="max-w-md">{MODES[DEFAULT_MODE].description}</CardDescription>
             </CardHeader>
             <CardContent className="relative flex flex-wrap items-center gap-4">
-              <Button size="lg" onClick={play} className="group h-12 px-8 text-base shadow-lg shadow-primary/30">
+              <Button size="lg" onClick={play} className="group">
                 <Swords className="transition-transform group-hover:rotate-12" />
                 Duell starten
                 <ArrowRight className="transition-transform group-hover:translate-x-1" />
@@ -166,14 +163,7 @@ export function DashboardPage() {
               <CardDescription>Dein Rang</CardDescription>
               {stats && tier ? (
                 <>
-                  <CardTitle
-                    className={cn(
-                      "bg-gradient-to-r bg-clip-text text-4xl font-black text-transparent",
-                      TIER_STYLES[tier.id].gradient,
-                    )}
-                  >
-                    {stats.rating}
-                  </CardTitle>
+                  <CardTitle className="text-4xl font-bold tabular-nums">{stats.rating}</CardTitle>
                   <CardAction>
                     <RankBadge rating={stats.rating} showRating={false} />
                   </CardAction>
@@ -229,7 +219,7 @@ export function DashboardPage() {
               value={data.streak.count > 0 ? String(data.streak.count) : "–"}
               hint={
                 data.streak.type === "win"
-                  ? "Siege in Folge 🔥"
+                  ? "Siege in Folge"
                   : data.streak.type === "loss"
                     ? "Niederlagen in Folge"
                     : data.streak.type === "draw"
