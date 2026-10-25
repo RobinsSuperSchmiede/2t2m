@@ -1,0 +1,23 @@
+{
+  "name": "2t2m",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,client -c blue,magenta \"npm run dev -w server\" \"npm run dev -w client\"",
+    "build": "npm run build -w server && npm run build -w client",
+    "typecheck": "npm run typecheck -w shared && npm run typecheck -w server && npm run typecheck -w client",
+    "db:up": "docker compose up -d db",
+    "db:generate": "npm run db:generate -w server",
+    "db:migrate": "npm run db:migrate -w server",
+    "start": "npm run start -w server"
+  },
+  "devDependencies": {
+    "concurrently": "latest",
+    "typescript": "latest"
+  }
+}
