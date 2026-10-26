@@ -5,6 +5,7 @@ import { Crown } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { InlineAd } from "@/components/ads";
 import { PlayerAvatar, RankBadge } from "@/components/player";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -22,12 +23,12 @@ export function LeaderboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Rangliste</h1>
+        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Rangliste</h1>
         <p className="text-muted-foreground mt-1">Die besten 100 Spieler in Flaggen & Umrisse.</p>
       </div>
 
       {data && data.length >= 3 && (
-        <div className="grid grid-cols-3 items-end gap-3">
+        <div className="grid grid-cols-3 items-end gap-2 sm:gap-3">
           {[1, 0, 2].map((i, pos) => {
             const entry = data[i]!;
             return (
@@ -39,10 +40,11 @@ export function LeaderboardPage() {
               >
                 <Card className={cn("items-center gap-3 text-center", i === 0 ? "py-8" : "py-5")}>
                   <Crown className={cn("size-6", PODIUM[i])} />
-                  <PlayerAvatar player={entry.player} className={i === 0 ? "size-16" : "size-12"} />
+                  <PlayerAvatar player={entry.player} className={i === 0 ? "size-12 sm:size-16" : "size-10 sm:size-12"} />
                   <div className="px-2">
                     <div className="truncate font-semibold">{entry.player.name}</div>
-                    <RankBadge rating={entry.player.rating} className="mt-1" />
+                    <RankBadge rating={entry.player.rating} className="mt-1 hidden sm:inline-flex" />
+                    <div className="text-muted-foreground font-mono text-xs sm:hidden">{entry.player.rating}</div>
                   </div>
                 </Card>
               </motion.div>
@@ -69,9 +71,9 @@ export function LeaderboardPage() {
                 <TableRow>
                   <TableHead className="w-14">#</TableHead>
                   <TableHead>Spieler</TableHead>
-                  <TableHead>Rang</TableHead>
-                  <TableHead className="text-right">Duelle</TableHead>
-                  <TableHead className="text-right">Siegquote</TableHead>
+                  <TableHead className="hidden sm:table-cell">Rang</TableHead>
+                  <TableHead className="hidden text-right sm:table-cell">Duelle</TableHead>
+                  <TableHead className="text-right">Siege</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -81,13 +83,16 @@ export function LeaderboardPage() {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <PlayerAvatar player={e.player} className="size-7" />
-                        <span className="font-medium">{e.player.name}</span>
+                        <div className="min-w-0">
+                          <div className="max-w-40 truncate font-medium sm:max-w-none">{e.player.name}</div>
+                          <div className="text-muted-foreground font-mono text-xs sm:hidden">{e.player.rating}</div>
+                        </div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <RankBadge rating={e.player.rating} />
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{e.games}</TableCell>
+                    <TableCell className="hidden text-right tabular-nums sm:table-cell">{e.games}</TableCell>
                     <TableCell className="text-right tabular-nums">{Math.round((e.wins / e.games) * 100)}%</TableCell>
                   </TableRow>
                 ))}
@@ -103,6 +108,7 @@ export function LeaderboardPage() {
           )}
         </CardContent>
       </Card>
+      <InlineAd />
     </div>
   );
 }

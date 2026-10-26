@@ -18,6 +18,14 @@ export const users = pgTable("users", {
   avatarUrl: text("avatar_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  /** Start des letzten Duells – Grundlage für das Stundenlimit kostenloser Spieler. */
+  lastGameStartedAt: timestamp("last_game_started_at", { withTimezone: true }),
+  stripeCustomerId: text("stripe_customer_id").unique(),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  /** Stripe-Status des Abos (active, trialing, past_due, canceled, …); null = nie abonniert. */
+  subscriptionStatus: text("subscription_status"),
+  subscriptionPeriodEnd: timestamp("subscription_period_end", { withTimezone: true }),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
 });
 
 /** Rating pro Spieler und Modus – jeder Modus hat seine eigene Rangliste. */

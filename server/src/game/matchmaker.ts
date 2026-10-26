@@ -1,5 +1,8 @@
-import { isModeId, matchmakingRange, type ModeId, type PublicPlayer } from "@2t2m/shared";
+import { FREE_GAME_COOLDOWN_MS, isModeId, matchmakingRange, type ModeId, type PublicPlayer } from "@2t2m/shared";
+import { inArray } from "drizzle-orm";
+import { isPro, nextGameAt } from "../account.js";
 import { findUser, userIdFromCookieHeader } from "../auth.js";
+import { db, schema } from "../db/index.js";
 import { getOrCreateRating } from "./persist.js";
 import { Match, userRoom } from "./match.js";
 import type { GameServer, GameSocket } from "./types.js";
@@ -15,6 +18,8 @@ const TICK_MS = 1000;
 export class Matchmaker {
   private readonly queue = new Map<string, QueueEntry>();
   private readonly matchesByUser = new Map<string, Match>();
+  /** Matchstarts der letzten Stunde – Absicherung, falls das Speichern in der DB fehlschlägt. */
+  private readonly recentStarts = new Map<string, number>();
 
   constructor(private readonly io: GameServer) {
     setInterval(() => this.tick(), TICK_MS).unref();
@@ -46,6 +51,17 @@ export class Matchmaker {
         if (this.matchesByUser.has(userId) || this.queue.has(userId)) return;
         const [user, rating] = await Promise.all([findUser(userId), getOrCreateRating(userId, payload.mode)]);
         if (!user) return;
+        // Stundenlimit für kostenlose Spieler – serverseitig, der Client zeigt nur den Timer.
+        if (!isPro(user)) {
+          const memNext = (this.recentStarts.get(userId) ?? 0) + FREE_GAME_COOLDOWN_MS;
+          const next = Math.max(nextGameAt(user) ?? 0, memNext);
+          if (next > Date.now()) {
+            socket.emit("queue:denied", { reason: "cooldown", nextGameAt: next });
+            return;
+          }
+        }
+        // Zwischen den awaits könnte ein zweiter Tab schon beigetreten sein.
+        if (this.matchesByUser.has(userId) || this.queue.has(userId)) return;
         const entry: QueueEntry = {
           mode: payload.mode,
           joinedAt: Date.now(),
@@ -114,5 +130,14 @@ export class Matchmaker {
     this.matchesByUser.set(a.player.id, match);
     this.matchesByUser.set(b.player.id, match);
     match.start();
+    // Ab Matchbeginn zählt das Duell für das Stundenlimit.
+    const now = Date.now();
+    for (const [id, at] of this.recentStarts) if (at + FREE_GAME_COOLDOWN_MS < now) this.recentStarts.delete(id);
+    this.recentStarts.set(a.player.id, now);
+    this.recentStarts.set(b.player.id, now);
+    db.update(schema.users)
+      .set({ lastGameStartedAt: new Date() })
+      .where(inArray(schema.users.id, [a.player.id, b.player.id]))
+      .catch((err) => console.error("lastGameStartedAt konnte nicht gespeichert werden", err));
   }
 }

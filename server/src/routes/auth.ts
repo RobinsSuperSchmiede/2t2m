@@ -1,24 +1,18 @@
 import { Router } from "express";
 import { z } from "zod";
-import type { AuthConfigResponse, User } from "@2t2m/shared";
+import type { AuthConfigResponse } from "@2t2m/shared";
+import { toUser } from "../account.js";
 import { clearSessionCookie, loginDev, loginWithGoogle, requireAuth, setSessionCookie } from "../auth.js";
-import type { UserRow } from "../db/schema.js";
 import { env } from "../env.js";
-
-export function toUser(row: UserRow): User {
-  return {
-    id: row.id,
-    name: row.name,
-    email: row.email,
-    avatarUrl: row.avatarUrl,
-    createdAt: row.createdAt.toISOString(),
-  };
-}
 
 export const authRouter = Router();
 
 authRouter.get("/config", (_req, res) => {
-  const body: AuthConfigResponse = { googleClientId: env.GOOGLE_CLIENT_ID ?? null, devLogin: env.devLogin };
+  const body: AuthConfigResponse = {
+    googleClientId: env.GOOGLE_CLIENT_ID ?? null,
+    devLogin: env.devLogin,
+    stripeEnabled: Boolean(env.STRIPE_SECRET_KEY),
+  };
   res.json(body);
 });
 

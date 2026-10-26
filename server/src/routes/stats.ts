@@ -2,6 +2,8 @@ import { Router } from "express";
 import { and, count, desc, eq, gt, inArray, or, sql } from "drizzle-orm";
 import {
   DEFAULT_MODE,
+  type CountryStat,
+  type DashboardDetails,
   isModeId,
   type DashboardResponse,
   type HistoryResponse,
@@ -12,10 +14,12 @@ import {
   type Outcome,
   type QuestionKind,
 } from "@2t2m/shared";
+import { isPro } from "../account.js";
 import { requireAuth } from "../auth.js";
 import { db, schema } from "../db/index.js";
 import type { MatchRow } from "../db/schema.js";
 import { getOrCreateRating } from "../game/persist.js";
+import { COUNTRIES } from "../game/questions.js";
 
 const { matches, users, ratings, matchAnswers } = schema;
 
@@ -83,17 +87,18 @@ async function modeStats(userId: string, mode: ModeId): Promise<ModeStats> {
   };
 }
 
+/** Öffentlich, auch ohne Anmeldung sichtbar. */
+export const publicStatsRouter = Router();
+
 export const statsRouter = Router();
 statsRouter.use(requireAuth);
 
-statsRouter.get("/dashboard", async (req, res) => {
-  const userId = req.user!.id;
-  const mode = modeFrom(req.query.mode);
+/** Detaillierte Auswertung – wird nur für Pro-Spieler berechnet. */
+async function dashboardDetails(userId: string, mode: ModeId, history: MatchHistoryItem[]): Promise<DashboardDetails> {
   const where = and(eq(matches.mode, mode), involves(userId));
+  const answersWhere = and(eq(matchAnswers.userId, userId), eq(matches.mode, mode));
 
-  const [stats, recentRows, scoreAgg, kindRows] = await Promise.all([
-    modeStats(userId, mode),
-    db.select().from(matches).where(where).orderBy(desc(matches.endedAt)).limit(50),
+  const [scoreAgg, kindRows, countryRows, speedRows] = await Promise.all([
     db
       .select({
         avg: sql<string | null>`avg(case when ${matches.player1Id} = ${userId} then ${matches.player1Score} else ${matches.player2Score} end)`,
@@ -109,18 +114,30 @@ statsRouter.get("/dashboard", async (req, res) => {
       })
       .from(matchAnswers)
       .innerJoin(matches, eq(matches.id, matchAnswers.matchId))
-      .where(and(eq(matchAnswers.userId, userId), eq(matches.mode, mode)))
+      .where(answersWhere)
       .groupBy(matchAnswers.kind),
+    db
+      .select({
+        code: matchAnswers.countryCode,
+        correct: sql<number>`count(*) filter (where ${matchAnswers.correct})::int`,
+        total: sql<number>`count(*)::int`,
+      })
+      .from(matchAnswers)
+      .innerJoin(matches, eq(matches.id, matchAnswers.matchId))
+      .where(answersWhere)
+      .groupBy(matchAnswers.countryCode),
+    // Antwortzeit = Abstand zur vorherigen Antwort im selben Duell.
+    db.execute<{ avg: string | null }>(sql`
+      select avg(gap)::float as avg from (
+        select ${matchAnswers.elapsedMs} - coalesce(lag(${matchAnswers.elapsedMs}) over (
+          partition by ${matchAnswers.matchId} order by ${matchAnswers.questionIndex}
+        ), 0) as gap
+        from ${matchAnswers}
+        inner join ${matches} on ${matches.id} = ${matchAnswers.matchId}
+        where ${matchAnswers.userId} = ${userId} and ${matches.mode} = ${mode}
+      ) t
+    `),
   ]);
-
-  const history = await toHistoryItems(userId, recentRows);
-
-  let streak: DashboardResponse["streak"] = { type: null, count: 0 };
-  for (const m of history) {
-    if (streak.type === null) streak = { type: m.outcome, count: 1 };
-    else if (m.outcome === streak.type) streak.count++;
-    else break;
-  }
 
   const chronological = [...history].reverse();
   const ratingHistory = chronological.length
@@ -132,18 +149,58 @@ statsRouter.get("/dashboard", async (req, res) => {
 
   const totals = kindRows.reduce((acc, r) => ({ c: acc.c + r.correct, t: acc.t + r.total }), { c: 0, t: 0 });
 
-  const body: DashboardResponse = {
-    stats,
-    streak,
+  const names = new Map(COUNTRIES.map((c) => [c.code, c.name]));
+  // Erst ab zwei Begegnungen aussagekräftig.
+  const countries: CountryStat[] = countryRows
+    .filter((r) => r.total >= 2)
+    .map((r) => ({ code: r.code, name: names.get(r.code) ?? r.code, correct: r.correct, total: r.total }));
+  const rate = (c: CountryStat) => c.correct / c.total;
+  const weakest = [...countries].sort((a, b) => rate(a) - rate(b) || b.total - a.total).filter((c) => rate(c) < 1).slice(0, 5);
+  const strongest = [...countries].sort((a, b) => rate(b) - rate(a) || b.total - a.total).filter((c) => rate(c) > 0).slice(0, 5);
+
+  const avgAnswer = speedRows.rows[0]?.avg;
+  return {
     accuracy: totals.t > 0 ? totals.c / totals.t : null,
     avgScore: scoreAgg[0]?.avg != null ? Number(scoreAgg[0].avg) : null,
     bestScore: scoreAgg[0]?.best ?? null,
+    avgAnswerMs: avgAnswer != null ? Math.round(Number(avgAnswer)) : null,
     ratingHistory,
-    recentMatches: history.slice(0, 5),
     kindAccuracy: (["flag", "outline"] as QuestionKind[]).map((kind) => {
       const row = kindRows.find((r) => r.kind === kind);
       return { kind, correct: row?.correct ?? 0, total: row?.total ?? 0 };
     }),
+    weakestCountries: weakest,
+    strongestCountries: strongest,
+  };
+}
+
+statsRouter.get("/dashboard", async (req, res) => {
+  const userId = req.user!.id;
+  const mode = modeFrom(req.query.mode);
+
+  const [stats, recentRows] = await Promise.all([
+    modeStats(userId, mode),
+    db
+      .select()
+      .from(matches)
+      .where(and(eq(matches.mode, mode), involves(userId)))
+      .orderBy(desc(matches.endedAt))
+      .limit(50),
+  ]);
+  const history = await toHistoryItems(userId, recentRows);
+
+  let streak: DashboardResponse["streak"] = { type: null, count: 0 };
+  for (const m of history) {
+    if (streak.type === null) streak = { type: m.outcome, count: 1 };
+    else if (m.outcome === streak.type) streak.count++;
+    else break;
+  }
+
+  const body: DashboardResponse = {
+    stats,
+    streak,
+    recentMatches: history.slice(0, 5),
+    details: isPro(req.user!) ? await dashboardDetails(userId, mode, history) : null,
   };
   res.json(body);
 });
@@ -175,7 +232,7 @@ statsRouter.get("/history", async (req, res) => {
   res.json(body);
 });
 
-statsRouter.get("/leaderboard", async (req, res) => {
+publicStatsRouter.get("/leaderboard", async (req, res) => {
   const mode = modeFrom(req.query.mode);
   const rows = await db
     .select({

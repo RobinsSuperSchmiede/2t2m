@@ -12,6 +12,7 @@ import type {
   Question,
   QueueJoinedPayload,
   ServerToClientEvents,
+  User,
 } from "@2t2m/shared";
 import { useAuth } from "./auth";
 
@@ -119,6 +120,8 @@ export function DuelProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [state, dispatch] = useReducer(reducer, initialState);
   const socketRef = useRef<DuelSocket | null>(null);
+  /** Modus, dem beigetreten werden soll, sobald die Verbindung steht (z. B. direkt nach dem Login). */
+  const pendingJoin = useRef<ModeId | null>(null);
   const offsetRef = useRef(0);
   offsetRef.current = state.clockOffset;
 
@@ -127,14 +130,28 @@ export function DuelProvider({ children }: { children: ReactNode }) {
     const socket: DuelSocket = io({ withCredentials: true });
     socketRef.current = socket;
 
-    socket.on("connect", () => dispatch({ type: "connected", value: true }));
+    socket.on("connect", () => {
+      dispatch({ type: "connected", value: true });
+      if (pendingJoin.current) {
+        socket.emit("queue:join", { mode: pendingJoin.current });
+        pendingJoin.current = null;
+      }
+    });
     socket.on("disconnect", () => dispatch({ type: "connected", value: false }));
     socket.on("connect_error", () => dispatch({ type: "connected", value: false }));
     socket.on("queue:joined", (payload) => dispatch({ type: "queueJoined", payload }));
     socket.on("queue:left", () => dispatch({ type: "queueLeft" }));
+    socket.on("queue:denied", ({ nextGameAt }) => {
+      // Server hat das Stundenlimit durchgesetzt – Timer im Konto aktualisieren.
+      queryClient.setQueryData<User | null>(["me"], (u) => (u ? { ...u, nextGameAt: new Date(nextGameAt).toISOString() } : u));
+      dispatch({ type: "queueLeft" });
+      toast("Dein kostenloses Duell für diese Stunde ist verbraucht.", {
+        description: "Mit Pro spielst du unbegrenzt.",
+      });
+    });
     socket.on("match:found", (payload) => {
       dispatch({ type: "matchFound", payload });
-      navigateRef.current("/play");
+      navigateRef.current("/");
     });
     socket.on("game:state", (payload) => {
       dispatch({
@@ -144,14 +161,15 @@ export function DuelProvider({ children }: { children: ReactNode }) {
         opponentScore: payload.opponentScore,
         question: payload.question,
       });
-      navigateRef.current("/play");
+      navigateRef.current("/");
     });
     socket.on("game:question", (question) => dispatch({ type: "question", question }));
     socket.on("game:answerResult", (payload) => dispatch({ type: "answerResult", payload }));
     socket.on("game:opponentScore", ({ score }) => dispatch({ type: "opponentScore", score }));
     socket.on("game:end", (payload) => {
       dispatch({ type: "end", payload });
-      void queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] !== "me" });
+      // Statistiken und Konto (nächstes freies Spiel) neu laden.
+      void queryClient.invalidateQueries();
     });
     socket.on("app:error", ({ message }) => toast.error(message));
 
@@ -169,7 +187,11 @@ export function DuelProvider({ children }: { children: ReactNode }) {
     () => ({
       state,
       serverNow,
-      joinQueue: (mode) => socketRef.current?.emit("queue:join", { mode }),
+      joinQueue: (mode) => {
+        const socket = socketRef.current;
+        if (socket?.connected) socket.emit("queue:join", { mode });
+        else pendingJoin.current = mode;
+      },
       leaveQueue: () => socketRef.current?.emit("queue:leave"),
       answer: (questionIndex, option) => socketRef.current?.emit("game:answer", { questionIndex, option }),
       forfeit: () => socketRef.current?.emit("game:forfeit"),

@@ -24,6 +24,7 @@
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.23.1",
     "socket.io": "^4.8.4",
+    "stripe": "^23.0.1",
     "topojson-client": "^3.1.0",
     "world-atlas": "^2.0.2",
     "world-countries": "^5.1.0",

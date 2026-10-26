@@ -3,11 +3,12 @@ import { useNavigate } from "react-router";
 import { animate, motion } from "motion/react";
 import confetti from "canvas-confetti";
 import { DEFAULT_MODE, getTier } from "@2t2m/shared";
-import { ArrowUpRight, LayoutDashboard, RotateCcw } from "lucide-react";
+import { ArrowUpRight, BarChart3, Clock, Crown, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { RatingDelta } from "@/components/match-row";
 import { PlayerAvatar, RankBadge } from "@/components/player";
+import { formatCountdown, useCooldown } from "@/hooks/use-cooldown";
 import { useDuel } from "@/lib/duel";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,7 @@ const HEADLINES = {
 export function ResultView() {
   const { state, joinQueue, reset } = useDuel();
   const navigate = useNavigate();
+  const cooldown = useCooldown();
   const result = state.result!;
   const match = state.match!;
   const headline = HEADLINES[result.outcome];
@@ -152,20 +154,31 @@ export function ResultView() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.7 }}
-        className="flex flex-wrap justify-center gap-3"
+        className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-center"
       >
-        <Button size="lg" onClick={() => joinQueue(DEFAULT_MODE)}>
-          <RotateCcw /> Nächstes Duell
-        </Button>
+        {cooldown > 0 ? (
+          <>
+            <Button size="lg" variant="secondary" disabled className="font-mono tabular-nums">
+              <Clock /> Nächstes Duell in {formatCountdown(cooldown)}
+            </Button>
+            <Button size="lg" onClick={() => navigate("/pro")}>
+              <Crown /> Pro – unbegrenzt spielen
+            </Button>
+          </>
+        ) : (
+          <Button size="lg" onClick={() => joinQueue(DEFAULT_MODE)}>
+            <RotateCcw /> Nächstes Duell
+          </Button>
+        )}
         <Button
           size="lg"
           variant="outline"
           onClick={() => {
             reset();
-            navigate("/");
+            navigate("/stats");
           }}
         >
-          <LayoutDashboard /> Dashboard
+          <BarChart3 /> Statistiken
         </Button>
       </motion.div>
     </motion.div>

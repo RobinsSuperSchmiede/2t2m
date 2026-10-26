@@ -40,4 +40,9 @@ export const api = {
   dashboard: (mode: ModeId) => request<DashboardResponse>(`/dashboard?mode=${mode}`),
   history: (mode: ModeId, page: number) => request<HistoryResponse>(`/history?mode=${mode}&page=${page}`),
   leaderboard: (mode: ModeId) => request<LeaderboardEntry[]>(`/leaderboard?mode=${mode}`),
+  checkout: () => request<{ url: string }>("/billing/checkout", { method: "POST" }),
+  portal: () => request<{ url: string }>("/billing/portal", { method: "POST" }),
+  syncCheckout: (sessionId: string) =>
+    request<User>("/billing/sync", { method: "POST", body: JSON.stringify({ sessionId }) }),
+  devTogglePro: () => request<User>("/billing/dev-toggle", { method: "POST" }),
 };

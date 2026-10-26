@@ -7,6 +7,10 @@ export const INTRO_DURATION_MS = 6_000;
 export const WRONG_ANSWER_PENALTY_MS = 1_000;
 export const STARTING_RATING = 1000;
 
+/** Kostenlose Spieler dürfen ein Duell pro Stunde starten. */
+export const FREE_GAME_COOLDOWN_MS = 60 * 60 * 1000;
+export const PRO_PRICE_LABEL = "3 €";
+
 /** Erlaubter Rating-Abstand im Matchmaking – wächst mit der Wartezeit, damit niemand ewig wartet. */
 export function matchmakingRange(waitedMs: number): number {
   return Math.min(600, 100 + Math.floor(waitedMs / 1000) * 20);
@@ -171,8 +175,15 @@ export interface QueueJoinedPayload {
   since: number;
 }
 
+export interface QueueDeniedPayload {
+  reason: "cooldown";
+  /** Zeitpunkt (ms), ab dem wieder gespielt werden darf. */
+  nextGameAt: number;
+}
+
 export interface ServerToClientEvents {
   "queue:joined": (payload: QueueJoinedPayload) => void;
+  "queue:denied": (payload: QueueDeniedPayload) => void;
   "queue:left": () => void;
   "match:found": (payload: MatchFoundPayload) => void;
   "game:state": (payload: GameStatePayload) => void;
@@ -194,12 +205,23 @@ export interface ClientToServerEvents {
 // REST-API
 // ---------------------------------------------------------------------------
 
+export interface Subscription {
+  status: string;
+  /** Ende des bezahlten Zeitraums (Verlängerung oder Ablauf). */
+  periodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+}
+
 export interface User {
   id: string;
   name: string;
   email: string;
   avatarUrl: string | null;
   createdAt: string;
+  pro: boolean;
+  subscription: Subscription | null;
+  /** Nur für kostenlose Spieler: ab wann das nächste Duell erlaubt ist (null = sofort). */
+  nextGameAt: string | null;
 }
 
 export interface ModeStats {
@@ -232,15 +254,31 @@ export interface RatingPoint {
   rating: number;
 }
 
-export interface DashboardResponse {
-  stats: ModeStats;
-  streak: { type: Outcome | null; count: number };
+export interface CountryStat {
+  code: string;
+  name: string;
+  correct: number;
+  total: number;
+}
+
+/** Detaillierte Statistiken – nur für Pro-Spieler. */
+export interface DashboardDetails {
   accuracy: number | null;
   avgScore: number | null;
   bestScore: number | null;
+  /** Ø Zeit pro Antwort in ms. */
+  avgAnswerMs: number | null;
   ratingHistory: RatingPoint[];
-  recentMatches: MatchHistoryItem[];
   kindAccuracy: { kind: QuestionKind; correct: number; total: number }[];
+  weakestCountries: CountryStat[];
+  strongestCountries: CountryStat[];
+}
+
+export interface DashboardResponse {
+  stats: ModeStats;
+  streak: { type: Outcome | null; count: number };
+  recentMatches: MatchHistoryItem[];
+  details: DashboardDetails | null;
 }
 
 export interface HistoryResponse {
@@ -260,4 +298,5 @@ export interface LeaderboardEntry {
 export interface AuthConfigResponse {
   googleClientId: string | null;
   devLogin: boolean;
+  stripeEnabled: boolean;
 }
