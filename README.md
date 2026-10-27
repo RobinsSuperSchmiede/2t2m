@@ -1,4 +1,4 @@
-# 2T2M Arena
+# 2T2M Battle
 
 Echtzeit-Duell-Plattform: Besucher landen direkt beim Spiel, melden sich beim Klick auf „Spielen“ mit Google an, werden per Matchmaking mit einem Gegner auf ähnlichem Niveau gepaart und treten 60 Sekunden lang gegeneinander an. Wer mehr Fragen richtig beantwortet, gewinnt Elo-Punkte, der Verlierer gibt welche ab.
 
@@ -10,21 +10,27 @@ Erster Modus: **Geografie – Flaggen & Umrisse** (Ranked).
 | -------- | ----------- |
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS v4, shadcn/ui, Motion (Animationen), TanStack Query, Recharts |
 | Backend  | Node.js, TypeScript, Express 5, Socket.IO (Echtzeit) |
-| Datenbank | PostgreSQL mit Drizzle ORM (Migrationen in `server/drizzle`) |
+| Datenbank | PostgreSQL mit Drizzle ORM (Migrationen in `apps/server/drizzle`) |
 | Auth     | Google Identity Services → ID-Token wird serverseitig geprüft → Session als httpOnly-JWT-Cookie |
 | Zahlungen | Stripe Checkout (Abo), Kundenportal, signierte Webhooks |
 
 ## Projektstruktur
 
 ```
-shared/   Gemeinsame Typen, Socket-Events, Modi, Rangstufen
-server/   API, Matchmaking, Spiellogik, Elo, DB-Schema
-client/   React-App (Spiel, Statistiken, Verlauf, Rangliste, Pro)
+apps/
+  client/        React-App (Spiel, Statistiken, Verlauf, Rangliste, Pro), Übersetzungen in src/locales
+  server/        API, Socket.IO-Spielserver, Matchmaking, Elo, DB-Schema und Migrationen
+packages/
+  shared/        Gemeinsame Typen, Socket-Events, Modi, Rangstufen, Sprachen
+deploy/aws/      ECS-Task-Definition für das Deployment
+docs/            Deployment-Anleitung
+.github/         CI (Typecheck, Build, Docker) und Deploy-Workflow
+Dockerfile       Produktions-Image (Server + gebauter Client)
 ```
 
 ## Lokales Setup
 
-Voraussetzungen: Node.js ≥ 22, Docker (für Postgres).
+Voraussetzungen: Node.js ≥ 22 (empfohlen: Version aus `.nvmrc`), Docker (für Postgres).
 
 ```bash
 npm install
@@ -35,10 +41,10 @@ npm run db:up
 ```
 
 ```bash
-cp server/.env.example server/.env
+cp apps/server/.env.example apps/server/.env
 ```
 
-Danach in `server/.env` mindestens `JWT_SECRET` auf einen langen Zufallswert setzen und (für Google-Login) `GOOGLE_CLIENT_ID` eintragen.
+Danach in `apps/server/.env` mindestens `JWT_SECRET` auf einen langen Zufallswert setzen und (für Google-Login) `GOOGLE_CLIENT_ID` eintragen.
 
 ```bash
 npm run dev
@@ -53,11 +59,11 @@ Migrationen laufen beim Serverstart automatisch.
 
 1. [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → **Anmeldedaten erstellen → OAuth-Client-ID** → Typ **Webanwendung**.
 2. Unter **Autorisierte JavaScript-Quellen** `http://localhost:5173` (und später die Produktions-Domain) eintragen.
-3. Die Client-ID in `server/.env` als `GOOGLE_CLIENT_ID` setzen. Ein Client-Secret wird nicht benötigt.
+3. Die Client-ID in `apps/server/.env` als `GOOGLE_CLIENT_ID` setzen. Ein Client-Secret wird nicht benötigt.
 
 ### Stripe (Pro-Abo) einrichten
 
-1. Im [Stripe-Dashboard](https://dashboard.stripe.com/test/apikeys) den geheimen Schlüssel kopieren und als `STRIPE_SECRET_KEY` in `server/.env` setzen (zum Testen den `sk_test_…`-Schlüssel).
+1. Im [Stripe-Dashboard](https://dashboard.stripe.com/test/apikeys) den geheimen Schlüssel kopieren und als `STRIPE_SECRET_KEY` in `apps/server/.env` setzen (zum Testen den `sk_test_…`-Schlüssel).
 2. Optional ein Produkt mit 3 €/Monat anlegen und dessen Preis-ID als `STRIPE_PRICE_ID` eintragen. Ohne Preis-ID legt der Checkout 3 €/Monat automatisch an.
 3. Webhook einrichten – lokal mit der [Stripe CLI](https://docs.stripe.com/stripe-cli):
 
@@ -72,7 +78,7 @@ Pro gilt, solange das Stripe-Abo den Status `active` oder `trialing` hat. Nach d
 
 ### Werbung
 
-Ohne Konfiguration zeigen die Werbeplätze eine eigene Anzeige für Pro. Für Google AdSense in `client/.env`:
+Ohne Konfiguration zeigen die Werbeplätze eine eigene Anzeige für Pro. Für Google AdSense in `apps/client/.env` (beim Docker-Build als `--build-arg`):
 
 ```
 VITE_ADSENSE_CLIENT=ca-pub-…
@@ -110,20 +116,26 @@ Rangstufen: Bronze (< 900), Silber, Gold (1100), Platin (1300), Diamant (1500), 
 
 ## Neue Themen hinzufügen
 
-Modi sind in `shared/src/index.ts` (`TOPICS`, `MODES`) registriert; Ratings, Matches und Matchmaking sind bereits pro Modus getrennt. Für ein neues Thema:
+Modi sind in `packages/shared/src/index.ts` (`MODES`) registriert; Texte dazu in `apps/client/src/locales`; Ratings, Matches und Matchmaking sind bereits pro Modus getrennt. Für ein neues Thema:
 
 1. Modus in `MODES` ergänzen.
-2. Einen Fragengenerator analog zu `server/src/game/questions.ts` schreiben und in `Match` je nach Modus auswählen.
+2. Einen Fragengenerator analog zu `apps/server/src/game/questions.ts` schreiben und in `Match` je nach Modus auswählen.
 3. Auf der Spielseite eine Karte für den Modus anlegen.
 
 ## Produktion
 
-```bash
-npm run build
-```
+Die App läuft als **ein Docker-Container** (API, Socket.IO-Spielserver und gebauter Client) mit PostgreSQL daneben. Empfohlenes Ziel ist **AWS ECS Fargate + Application Load Balancer + RDS** – Schritt für Schritt in [docs/deployment.md](docs/deployment.md), inklusive der Gründe, warum Vercel und Cloudflare für den Spielserver nicht passen.
+
+Produktionsnah lokal testen (App auf http://localhost:8080):
 
 ```bash
-NODE_ENV=production npm start -w server
+npm run docker:prod
 ```
 
-Der Server liefert dann den gebauten Client aus `client/dist` mit aus. `CLIENT_ORIGIN` und `APP_URL` auf die öffentliche URL setzen, die Domain bei Google als JavaScript-Quelle eintragen und den Stripe-Webhook auf die Produktions-URL zeigen lassen.
+Wichtig für den Betrieb:
+
+- **Health-Checks:** `/api/health` (Prozess läuft) und `/api/health/ready` (DB erreichbar, kein Shutdown) – Letzteren im Load Balancer verwenden.
+- **Deploys ohne abgebrochene Duelle:** Bei `SIGTERM` nimmt der Server keine neuen Duelle mehr an, schickt wartende Spieler zur neuen Instanz und spielt laufende Duelle zu Ende (`SHUTDOWN_TIMEOUT_MS`, Standard 90 s).
+- **Migrationen** laufen beim Start, abgesichert über eine Postgres-Advisory-Lock.
+- **Logs** sind in Produktion JSON (pino), lokal lesbar formatiert.
+- **Skalierung:** Warteschlange und laufende Duelle liegen im Speicher – es läuft genau **eine** Instanz gleichzeitig (außer kurz während eines Deploys). Für mehrere Instanzen siehe „Skalierung“ in der Deployment-Anleitung.

@@ -1,0 +1,58 @@
+name: Deploy (AWS ECS)
+
+# Manuell auslösen. Voraussetzungen und einmalige Einrichtung: docs/deployment.md
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  id-token: write # OIDC-Anmeldung bei AWS, keine langlebigen Schlüssel
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - uses: docker/setup-buildx-action@v3
+
+      - id: image
+        name: Image bauen und nach ECR pushen
+        env:
+          IMAGE: ${{ steps.ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ github.sha }}
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --build-arg VITE_ADSENSE_CLIENT="${{ vars.VITE_ADSENSE_CLIENT }}" \
+            --build-arg VITE_ADSENSE_SLOT_RAIL="${{ vars.VITE_ADSENSE_SLOT_RAIL }}" \
+            --build-arg VITE_ADSENSE_SLOT_INLINE="${{ vars.VITE_ADSENSE_SLOT_INLINE }}" \
+            --cache-from type=gha --cache-to type=gha,mode=max \
+            --tag "$IMAGE" --push .
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - id: taskdef
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: deploy/aws/task-definition.json
+          container-name: app
+          image: ${{ steps.image.outputs.image }}
+
+      - uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.taskdef.outputs.task-definition }}
+          cluster: ${{ vars.ECS_CLUSTER }}
+          service: ${{ vars.ECS_SERVICE }}
+          wait-for-service-stability: true

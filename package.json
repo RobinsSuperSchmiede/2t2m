@@ -3,21 +3,25 @@
   "private": true,
   "version": "0.1.0",
   "workspaces": [
-    "shared",
-    "server",
-    "client"
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
-    "dev": "concurrently -n server,client -c blue,magenta \"npm run dev -w server\" \"npm run dev -w client\"",
-    "build": "npm run build -w server && npm run build -w client",
-    "typecheck": "npm run typecheck -w shared && npm run typecheck -w server && npm run typecheck -w client",
+    "dev": "concurrently -n server,client -c blue,magenta \"npm run dev -w @2t2m/server\" \"npm run dev -w @2t2m/client\"",
+    "build": "npm run build -w @2t2m/server && npm run build -w @2t2m/client",
+    "typecheck": "npm run typecheck --workspaces",
+    "start": "npm run start -w @2t2m/server",
     "db:up": "docker compose up -d db",
-    "db:generate": "npm run db:generate -w server",
-    "db:migrate": "npm run db:migrate -w server",
-    "start": "npm run start -w server"
+    "db:generate": "npm run db:generate -w @2t2m/server",
+    "db:migrate": "npm run db:migrate -w @2t2m/server",
+    "docker:build": "docker build -t 2t2m .",
+    "docker:prod": "docker compose --profile prod up --build"
   },
   "devDependencies": {
-    "concurrently": "latest",
-    "typescript": "latest"
+    "concurrently": "^10.0.6",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

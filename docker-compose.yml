@@ -1,3 +1,5 @@
+# Lokale Entwicklung:   docker compose up -d db
+# Produktionsnah testen: docker compose --profile prod up --build
 services:
   db:
     image: postgres:17-alpine
@@ -10,6 +12,28 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U duel -d duel"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    profiles: ["prod"]
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:3001"
+    environment:
+      DATABASE_URL: postgres://duel:duel@db:5432/duel
+      JWT_SECRET: local-prod-test-secret-please-change-0123456789
+      CLIENT_ORIGIN: http://localhost:8080
+      APP_URL: http://localhost:8080
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+    # Wie auf ECS: Zeit für laufende Duelle beim Stoppen.
+    stop_grace_period: 2m
 
 volumes:
   pgdata:
