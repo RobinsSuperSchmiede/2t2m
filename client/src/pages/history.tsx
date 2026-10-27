@@ -10,10 +10,12 @@ import { AuthGate } from "@/components/auth-gate";
 import { MatchRow } from "@/components/match-row";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useI18n } from "@/lib/i18n";
 
 export function HistoryPage() {
   const { user } = useAuth();
   const [page, setPage] = useState(1);
+  const { t, fmt } = useI18n();
   const { data, isLoading } = useQuery({
     queryKey: ["history", DEFAULT_MODE, page],
     queryFn: () => api.history(DEFAULT_MODE, page),
@@ -25,14 +27,14 @@ export function HistoryPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Verlauf</h1>
-        <p className="text-muted-foreground mt-1">Alle deine Duelle im Überblick.</p>
+        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{t.history.title}</h1>
+        <p className="text-muted-foreground mt-1">{t.history.subtitle}</p>
       </div>
-      <AuthGate icon={History} title="Dein Verlauf" description="Melde dich an, um alle deine Duelle zu sehen.">
+      <AuthGate icon={History} title={t.history.gateTitle} description={t.history.gateDescription}>
         <Card>
           <CardHeader>
-            <CardTitle>Flaggen & Umrisse</CardTitle>
-            <CardDescription>{data ? `${data.total} Duelle insgesamt` : " "}</CardDescription>
+            <CardTitle>{t.mode.name}</CardTitle>
+            <CardDescription>{data ? fmt(t.history.total, { count: data.total }) : " "}</CardDescription>
           </CardHeader>
           <CardContent className="px-2 md:px-3">
             {isLoading ? (
@@ -48,12 +50,12 @@ export function HistoryPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-muted-foreground py-10 text-center text-sm">Noch keine Duelle gespielt.</p>
+              <p className="text-muted-foreground py-10 text-center text-sm">{t.history.empty}</p>
             )}
             {pages > 1 && (
               <div className="flex items-center justify-end gap-2 px-3 pt-4">
                 <span className="text-muted-foreground mr-2 text-sm">
-                  Seite {page} von {pages}
+                  {fmt(t.history.page, { page, pages })}
                 </span>
                 <Button variant="outline" size="icon-sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
                   <ChevronLeft />

@@ -5,9 +5,11 @@ import { Flag, Map, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlayerAvatar } from "@/components/player";
 import { useDuel, useServerClock } from "@/lib/duel";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 function ScoreBlock({ player, score, side }: { player: PublicPlayer; score: number; side: "you" | "rival" }) {
+  const { t } = useI18n();
   const isYou = side === "you";
   return (
     <div className={cn("flex min-w-0 flex-1 items-center gap-3", !isYou && "flex-row-reverse text-right")}>
@@ -17,7 +19,7 @@ function ScoreBlock({ player, score, side }: { player: PublicPlayer; score: numb
       />
       <div className="min-w-0">
         <div className="text-muted-foreground text-[10px] font-medium tracking-[0.25em] uppercase">
-          {isYou ? "Du" : "Gegner"}
+          {isYou ? t.common.you : t.common.opponent}
         </div>
         <div className="truncate text-sm font-semibold">{player.name}</div>
       </div>
@@ -99,8 +101,10 @@ function QuestionImage({ question }: { question: Question }) {
 
 export function GameView() {
   const { state, answer, forfeit } = useDuel();
+  const { t, local } = useI18n();
   const now = useServerClock(100);
-  const match = state.match!;
+  // Beim Mounten festhalten: Während der Exit-Animation rendert die Ansicht weiter, obwohl der Zustand schon zurückgesetzt sein kann.
+  const [match] = useState(() => state.match!);
   const [shown, setShown] = useState<Question | null>(state.question);
   const [selected, setSelected] = useState<number | null>(null);
   const [showGo] = useState(() => now - match.startsAt < 900);
@@ -169,7 +173,7 @@ export function GameView() {
               transition={{ type: "spring", stiffness: 260, damping: 12 }}
               className="text-8xl font-black italic"
             >
-              LOS!
+              {t.game.go}
             </motion.span>
           </motion.div>
         )}
@@ -215,7 +219,7 @@ export function GameView() {
             >
               <div className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
                 {shown.kind === "flag" ? <Flag className="size-4" /> : <Map className="size-4" />}
-                {shown.prompt}
+                {shown.kind === "flag" ? t.game.promptFlag : t.game.promptOutline}
                 <span className="font-mono text-xs opacity-60">#{shown.index + 1}</span>
               </div>
               <div className="flex h-56 w-full items-center justify-center md:h-64" style={{ perspective: 800 }}>
@@ -228,7 +232,7 @@ export function GameView() {
                   const isWrong = feedback && isSelected && !feedback.correct;
                   return (
                     <motion.button
-                      key={opt}
+                      key={opt.en}
                       type="button"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0, scale: isSelected && feedback ? [1, 1.04, 1] : 1 }}
@@ -249,7 +253,7 @@ export function GameView() {
                       <kbd className="bg-muted text-muted-foreground grid size-6 shrink-0 place-items-center rounded-md font-mono text-xs">
                         {i + 1}
                       </kbd>
-                      <span className="truncate">{opt}</span>
+                      <span className="truncate">{local(opt)}</span>
                     </motion.button>
                   );
                 })}
@@ -270,7 +274,7 @@ export function GameView() {
                 animate={{ scale: 1, opacity: 1 }}
                 className="text-5xl font-black"
               >
-                Zeit!
+                {t.game.timeUp}
               </motion.span>
             </motion.div>
           )}
@@ -278,9 +282,9 @@ export function GameView() {
       </div>
 
       <div className="flex justify-center">
-        <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => window.confirm("Wirklich aufgeben? Das zählt als Niederlage.") && forfeit()}
+        <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => window.confirm(t.game.forfeitConfirm) && forfeit()}
           disabled={timeUp}>
-          <Flag /> Aufgeben
+          <Flag /> {t.game.forfeit}
         </Button>
       </div>
     </motion.div>

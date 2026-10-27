@@ -95,7 +95,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   const userId = verifySession(req.cookies?.[SESSION_COOKIE]);
   const user = userId ? await findUser(userId) : undefined;
   if (!user) {
-    res.status(401).json({ error: "Nicht angemeldet" });
+    res.status(401).json({ error: "unauthorized" });
     return;
   }
   req.user = user;

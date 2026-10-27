@@ -4,7 +4,7 @@ import type { Feature, MultiPolygon, Polygon } from "geojson";
 import { feature } from "topojson-client";
 import type { GeometryCollection, Topology } from "topojson-specification";
 import * as flags from "country-flag-icons/string/3x2";
-import type { Question, QuestionKind } from "@2t2m/shared";
+import type { LocalizedText, Question, QuestionKind } from "@2t2m/shared";
 
 const require = createRequire(import.meta.url);
 const countriesData = require("world-countries/countries.json") as WorldCountry[];
@@ -24,14 +24,14 @@ interface WorldCountry {
 
 export interface Country {
   code: string;
-  name: string;
+  name: LocalizedText;
   region: string;
   subregion: string;
   flagSvg: string | null;
   outlinePath: string | null;
 }
 
-const OUTLINE_SIZE = 400;
+export const OUTLINE_SIZE = 400;
 const OUTLINE_PADDING = 16;
 /** Sehr kleine Länder sind als Umriss nur ein Punkt und werden nur als Flaggen-Frage genutzt. */
 const MIN_OUTLINE_AREA_KM2 = 8_000;
@@ -90,7 +90,7 @@ function buildCountries(): Country[] {
       const geometry = geometries.get(c.ccn3);
       return {
         code: c.cca2,
-        name: c.translations.deu?.common ?? c.name.common,
+        name: { en: c.name.common, de: c.translations.deu?.common ?? c.name.common },
         region: c.region,
         subregion: c.subregion,
         flagSvg: flagMap[c.cca2] ?? null,
@@ -184,7 +184,6 @@ export class QuestionSequence {
       public: {
         index,
         kind,
-        prompt: kind === "flag" ? "Zu welchem Land gehört diese Flagge?" : "Welches Land hat diesen Umriss?",
         image:
           kind === "flag"
             ? { type: "svg", markup: answer.flagSvg! }

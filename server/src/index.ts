@@ -54,10 +54,10 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
   console.error(err);
   // Fehler der Stripe-API (z. B. ungültiger Schlüssel, Netzwerk) verständlich weitergeben.
   if (typeof (err as { type?: unknown }).type === "string" && (err as { type: string }).type.startsWith("Stripe")) {
-    res.status(502).json({ error: "Der Zahlungsanbieter ist gerade nicht erreichbar. Bitte versuche es später erneut." });
+    res.status(502).json({ error: "payment_provider_unavailable" });
     return;
   }
-  res.status(500).json({ error: "Interner Fehler" });
+  res.status(500).json({ error: "internal" });
 });
 
 const httpServer = createServer(app);

@@ -198,7 +198,7 @@ export class Match {
     } catch (err) {
       console.error(`Match ${this.id} konnte nicht gespeichert werden`, err);
       for (const p of this.players) {
-        this.io.to(userRoom(p.info.id)).emit("app:error", { message: "Das Match konnte nicht gespeichert werden." });
+        this.io.to(userRoom(p.info.id)).emit("app:error", { code: "match_save_failed" });
       }
     } finally {
       this.onFinished(this);

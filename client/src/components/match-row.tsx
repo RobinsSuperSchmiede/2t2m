@@ -1,12 +1,11 @@
 import type { MatchHistoryItem, Outcome } from "@2t2m/shared";
 import { Badge } from "@/components/ui/badge";
 import { PlayerAvatar } from "@/components/player";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-export const OUTCOME_LABEL: Record<Outcome, string> = { win: "Sieg", loss: "Niederlage", draw: "Unentschieden" };
-const OUTCOME_SHORT: Record<Outcome, string> = { win: "S", loss: "N", draw: "U" };
-
 export function OutcomeBadge({ outcome }: { outcome: Outcome }) {
+  const { t } = useI18n();
   return (
     <Badge
       variant="outline"
@@ -16,8 +15,8 @@ export function OutcomeBadge({ outcome }: { outcome: Outcome }) {
         outcome === "loss" && "border-danger/40 bg-danger/10 text-danger",
       )}
     >
-      <span className="sm:hidden">{OUTCOME_SHORT[outcome]}</span>
-      <span className="hidden sm:inline">{OUTCOME_LABEL[outcome]}</span>
+      <span className="sm:hidden">{t.outcome[`${outcome}Short`]}</span>
+      <span className="hidden sm:inline">{t.outcome[outcome]}</span>
     </Badge>
   );
 }
@@ -37,9 +36,9 @@ export function RatingDelta({ delta, className }: { delta: number; className?: s
   );
 }
 
-const relative = new Intl.RelativeTimeFormat("de", { numeric: "auto" });
-
-export function timeAgo(iso: string): string {
+/** Relative Zeitangabe ("vor 5 Minuten"); `justNow` für alles unter einer Minute. */
+function timeAgo(iso: string, lang: string, justNow: string): string {
+  const relative = new Intl.RelativeTimeFormat(lang, { numeric: "auto" });
   const seconds = Math.round((new Date(iso).getTime() - Date.now()) / 1000);
   const steps: [Intl.RelativeTimeFormatUnit, number][] = [
     ["year", 31536000],
@@ -52,10 +51,11 @@ export function timeAgo(iso: string): string {
   for (const [unit, size] of steps) {
     if (Math.abs(seconds) >= size) return relative.format(Math.round(seconds / size), unit);
   }
-  return "gerade eben";
+  return justNow;
 }
 
 export function MatchRow({ match }: { match: MatchHistoryItem }) {
+  const { t, lang } = useI18n();
   return (
     <div className="hover:bg-accent/40 flex items-center gap-3 rounded-lg px-2 py-3 transition-colors sm:gap-4 sm:px-3">
       <OutcomeBadge outcome={match.outcome} />
@@ -64,8 +64,8 @@ export function MatchRow({ match }: { match: MatchHistoryItem }) {
         <div className="min-w-0">
           <div className="truncate text-sm font-medium">{match.opponent.name}</div>
           <div className="text-muted-foreground text-xs">
-            {timeAgo(match.endedAt)}
-            {match.forfeit && " · Aufgegeben"}
+            {timeAgo(match.endedAt, lang, t.time.justNow)}
+            {match.forfeit && ` · ${t.history.forfeit}`}
           </div>
         </div>
       </div>

@@ -1,7 +1,8 @@
-import { NavLink, Outlet, useNavigate } from "react-router";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { DEFAULT_MODE } from "@2t2m/shared";
-import { BarChart3, Crown, History, LogIn, LogOut, Swords, Trophy } from "lucide-react";
+import { AnimatePresence } from "motion/react";
+import { DEFAULT_MODE, LANGUAGES, type Lang } from "@2t2m/shared";
+import { BarChart3, Crown, Globe, History, LogIn, LogOut, Moon, Settings, Sun, Swords, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,39 +10,74 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { AdRail, useShowAds } from "@/components/ads";
+import { Backdrop } from "@/components/backdrop";
 import { PlayerAvatar, RankBadge } from "@/components/player";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useDuel } from "@/lib/duel";
+import { LANGUAGE_NAMES, useI18n, type Dict } from "@/lib/i18n";
+import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
-const NAV = [
-  { to: "/", label: "Spielen", short: "Spielen", icon: Swords, end: true },
-  { to: "/stats", label: "Statistiken", short: "Statistik", icon: BarChart3, end: false },
-  { to: "/history", label: "Verlauf", short: "Verlauf", icon: History, end: false },
-  { to: "/leaderboard", label: "Rangliste", short: "Rangliste", icon: Trophy, end: false },
-  { to: "/pro", label: "Pro", short: "Pro", icon: Crown, end: false },
+type NavKey = keyof Dict["nav"];
+
+const NAV: { to: string; label: NavKey; short: NavKey; icon: typeof Swords; end: boolean }[] = [
+  { to: "/", label: "play", short: "play", icon: Swords, end: true },
+  { to: "/stats", label: "stats", short: "statsShort", icon: BarChart3, end: false },
+  { to: "/history", label: "history", short: "history", icon: History, end: false },
+  { to: "/leaderboard", label: "leaderboard", short: "leaderboardShort", icon: Trophy, end: false },
+  { to: "/pro", label: "pro", short: "pro", icon: Crown, end: false },
 ];
 
 export function Logo({ className }: { className?: string }) {
   return (
-    <span className={cn("flex items-center gap-2 font-bold tracking-tight", className)}>
-      <span className="bg-primary text-primary-foreground grid size-8 place-items-center rounded-lg">
-        <Swords className="size-4" />
-      </span>
-      <span>
-        2T2M<span className="text-muted-foreground hidden font-medium sm:inline"> Arena</span>
-      </span>
-    </span>
+    <span className={cn("logo-shimmer text-xl font-bold tracking-tight", className)}>2T2M Battle</span>
+  );
+}
+
+/** Hell/Dunkel und Sprache – im Profil-Menü bzw. ohne Anmeldung im Einstellungs-Menü. */
+function PreferenceItems() {
+  const { theme, toggleTheme } = useTheme();
+  const { lang, setLang, t } = useI18n();
+  return (
+    <>
+      {/* Menü bleibt beim Umschalten offen, damit man den Unterschied direkt sieht */}
+      <DropdownMenuItem onSelect={(e) => (e.preventDefault(), toggleTheme())}>
+        {theme === "dark" ? <Sun /> : <Moon />}
+        {theme === "dark" ? t.header.lightMode : t.header.darkMode}
+      </DropdownMenuItem>
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger>
+          <Globe />
+          <span className="flex-1">{t.header.language}</span>
+          <span className="text-muted-foreground text-xs uppercase">{lang}</span>
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent>
+          <DropdownMenuRadioGroup value={lang} onValueChange={(l) => setLang(l as Lang)}>
+            {LANGUAGES.map((l) => (
+              <DropdownMenuRadioItem key={l} value={l}>
+                {LANGUAGE_NAMES[l]}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
+    </>
   );
 }
 
 function UserMenu() {
   const { user, logout, requireLogin } = useAuth();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const dashboard = useQuery({
     queryKey: ["dashboard", DEFAULT_MODE],
@@ -51,9 +87,21 @@ function UserMenu() {
 
   if (!user) {
     return (
-      <Button size="sm" onClick={() => requireLogin()}>
-        <LogIn /> Anmelden
-      </Button>
+      <>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label={t.header.settings}>
+              <Settings />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <PreferenceItems />
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <Button size="sm" onClick={() => requireLogin()}>
+          <LogIn /> {t.header.login}
+        </Button>
+      </>
     );
   }
 
@@ -66,12 +114,12 @@ function UserMenu() {
         </Badge>
       ) : (
         <Button size="sm" variant="outline" className="hidden sm:inline-flex" onClick={() => navigate("/pro")}>
-          <Crown /> Pro holen
+          <Crown /> {t.header.getPro}
         </Button>
       )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="rounded-full" aria-label="Konto">
+          <Button variant="ghost" size="icon" className="rounded-full" aria-label={t.header.account}>
             <PlayerAvatar player={user} className="size-8" />
           </Button>
         </DropdownMenuTrigger>
@@ -82,10 +130,13 @@ function UserMenu() {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => navigate("/pro")}>
-            <Crown /> {user.pro ? "Abo verwalten" : "Pro holen"}
+            <Crown /> {user.pro ? t.header.manageSubscription : t.header.getPro}
           </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <PreferenceItems />
+          <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onClick={() => void logout().then(() => navigate("/"))}>
-            <LogOut /> Abmelden
+            <LogOut /> {t.header.logout}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -96,18 +147,27 @@ function UserMenu() {
 export function AppLayout() {
   const { state } = useDuel();
   const showAds = useShowAds();
+  const { pathname } = useLocation();
+  const { t } = useI18n();
   const inGame = state.phase === "intro" || state.phase === "playing";
 
   return (
     <div className="min-h-svh overflow-x-clip">
+      {/* Während des Duells ausgeblendet, damit nichts von Flagge/Umriss ablenkt */}
+      <AnimatePresence>{pathname === "/" && !inGame && <Backdrop key="backdrop" />}</AnimatePresence>
       <header
         className={cn(
-          "bg-background/80 sticky top-0 z-40 border-b backdrop-blur transition-opacity",
+          "sticky top-0 z-40 transition-opacity",
           inGame && "pointer-events-none opacity-40",
         )}
       >
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 md:h-16 md:gap-6">
-          <NavLink to="/" aria-label="Startseite">
+        {/* Hintergrund läuft nach unten weich aus – keine harte Kante zum Inhalt */}
+        <div
+          aria-hidden
+          className="from-background via-background/85 pointer-events-none absolute inset-x-0 top-0 -bottom-6 bg-gradient-to-b to-transparent"
+        />
+        <div className="relative grid h-14 grid-cols-[1fr_auto] items-center gap-4 px-4 md:h-16 md:grid-cols-[1fr_auto_1fr] md:px-6">
+          <NavLink to="/" aria-label={t.header.home} className="justify-self-start">
             <Logo />
           </NavLink>
           <nav className="hidden items-center gap-1 md:flex">
@@ -124,11 +184,11 @@ export function AppLayout() {
                 }
               >
                 <Icon className="size-4" />
-                {label}
+                {t.nav[label]}
               </NavLink>
             ))}
           </nav>
-          <div className="ml-auto flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1 justify-self-end sm:gap-2">
             <UserMenu />
           </div>
         </div>
@@ -161,7 +221,7 @@ export function AppLayout() {
                 }
               >
                 <Icon className="size-5" />
-                {short}
+                {t.nav[short]}
               </NavLink>
             ))}
           </div>

@@ -15,6 +15,7 @@ import type {
   User,
 } from "@2t2m/shared";
 import { useAuth } from "./auth";
+import { useI18n } from "./i18n";
 
 type DuelSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -118,6 +119,10 @@ export function DuelProvider({ children }: { children: ReactNode }) {
   const navigateRef = useRef(navigate);
   navigateRef.current = navigate;
   const queryClient = useQueryClient();
+  const { t } = useI18n();
+  // Socket-Handler sollen nicht bei jedem Sprachwechsel neu verbinden.
+  const tRef = useRef(t);
+  tRef.current = t;
   const [state, dispatch] = useReducer(reducer, initialState);
   const socketRef = useRef<DuelSocket | null>(null);
   /** Modus, dem beigetreten werden soll, sobald die Verbindung steht (z. B. direkt nach dem Login). */
@@ -145,9 +150,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       // Server hat das Stundenlimit durchgesetzt – Timer im Konto aktualisieren.
       queryClient.setQueryData<User | null>(["me"], (u) => (u ? { ...u, nextGameAt: new Date(nextGameAt).toISOString() } : u));
       dispatch({ type: "queueLeft" });
-      toast("Dein kostenloses Duell für diese Stunde ist verbraucht.", {
-        description: "Mit Pro spielst du unbegrenzt.",
-      });
+      toast(tRef.current.duel.cooldownTitle, { description: tRef.current.duel.cooldownDescription });
     });
     socket.on("match:found", (payload) => {
       dispatch({ type: "matchFound", payload });
@@ -171,7 +174,10 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       // Statistiken und Konto (nächstes freies Spiel) neu laden.
       void queryClient.invalidateQueries();
     });
-    socket.on("app:error", ({ message }) => toast.error(message));
+    socket.on("app:error", ({ code }) => {
+      const errors = tRef.current.errors;
+      toast.error(code in errors ? errors[code as keyof typeof errors] : tRef.current.common.unknownError);
+    });
 
     return () => {
       socket.removeAllListeners();

@@ -123,3 +123,34 @@
   height: 100%;
   display: block;
 }
+
+/* Logo: Lichtreflex wandert über den Schriftzug */
+.logo-shimmer {
+  background: linear-gradient(
+      100deg,
+      var(--foreground) 0%,
+      var(--foreground) 40%,
+      var(--muted-foreground) 50%,
+      var(--foreground) 60%,
+      var(--foreground) 100%
+    )
+    0 0 / 250% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: logo-shimmer 4s ease-in-out infinite;
+}
+@keyframes logo-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  60%,
+  100% {
+    background-position: 0% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .logo-shimmer {
+    animation: none;
+  }
+}

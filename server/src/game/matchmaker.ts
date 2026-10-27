@@ -72,7 +72,7 @@ export class Matchmaker {
         this.tick();
       } catch (err) {
         console.error(err);
-        socket.emit("app:error", { message: "Matchmaking ist gerade nicht verfügbar." });
+        socket.emit("app:error", { code: "matchmaking_unavailable" });
       }
     });
 

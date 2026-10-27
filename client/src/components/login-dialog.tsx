@@ -9,11 +9,15 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useI18n } from "@/lib/i18n";
+import { useTheme } from "@/lib/theme";
 
 export function LoginDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { loginGoogle, loginDev } = useAuth();
   const config = useQuery({ queryKey: ["auth-config"], queryFn: api.authConfig, staleTime: Infinity });
   const [devName, setDevName] = useState("");
+  const { t, fmt, errorText } = useI18n();
+  const { theme } = useTheme();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -22,31 +26,28 @@ export function LoginDialog({ open, onOpenChange }: { open: boolean; onOpenChang
           <div className="bg-primary text-primary-foreground mb-2 grid size-10 place-items-center rounded-lg">
             <Swords className="size-5" />
           </div>
-          <DialogTitle>Anmelden zum Spielen</DialogTitle>
-          <DialogDescription>
-            Mit deinem Konto werden Rating, Rang und Verlauf gespeichert.
-          </DialogDescription>
+          <DialogTitle>{t.auth.title}</DialogTitle>
+          <DialogDescription>{t.auth.description}</DialogDescription>
         </DialogHeader>
 
         <div className="flex min-h-11 justify-center pt-2">
           {config.data?.googleClientId ? (
             <GoogleLogin
-              theme="filled_black"
+              theme={theme === "dark" ? "filled_black" : "outline"}
               shape="rectangular"
               size="large"
               text="continue_with"
               onSuccess={(res) => {
                 if (res.credential) {
-                  loginGoogle(res.credential).catch(() => toast.error("Anmeldung fehlgeschlagen"));
+                  loginGoogle(res.credential).catch(() => toast.error(t.auth.failed));
                 }
               }}
-              onError={() => void toast.error("Google-Anmeldung abgebrochen")}
+              onError={() => void toast.error(t.auth.googleCancelled)}
             />
           ) : (
             config.data && (
               <p className="text-muted-foreground text-center text-sm">
-                Google-Login ist nicht konfiguriert. Setze <code className="font-mono">GOOGLE_CLIENT_ID</code> in der{" "}
-                <code className="font-mono">server/.env</code>.
+                {fmt(t.auth.googleNotConfigured, { key: "GOOGLE_CLIENT_ID", file: "server/.env" })}
               </p>
             )
           )}
@@ -56,19 +57,19 @@ export function LoginDialog({ open, onOpenChange }: { open: boolean; onOpenChang
           <>
             <div className="flex items-center gap-3">
               <Separator className="flex-1" />
-              <span className="text-muted-foreground text-xs uppercase">Entwicklung</span>
+              <span className="text-muted-foreground text-xs uppercase">{t.auth.development}</span>
               <Separator className="flex-1" />
             </div>
             <form
               className="flex gap-2"
               onSubmit={(e) => {
                 e.preventDefault();
-                loginDev(devName).catch((err: Error) => toast.error(err.message));
+                loginDev(devName).catch((err: Error) => toast.error(errorText(err)));
               }}
             >
-              <Input placeholder="Testname" value={devName} onChange={(e) => setDevName(e.target.value)} />
+              <Input placeholder={t.auth.testName} value={devName} onChange={(e) => setDevName(e.target.value)} />
               <Button type="submit" variant="secondary" disabled={devName.trim().length < 2}>
-                Login
+                {t.auth.login}
               </Button>
             </form>
           </>

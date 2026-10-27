@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import type { PublicPlayer } from "@2t2m/shared";
 import { PlayerAvatar, RankBadge } from "@/components/player";
 import { useDuel, useServerClock } from "@/lib/duel";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 function PlayerCard({ player, side, label }: { player: PublicPlayer; side: "left" | "right"; label: string }) {
@@ -36,7 +38,9 @@ function PlayerCard({ player, side, label }: { player: PublicPlayer; side: "left
 export function VersusIntro() {
   const { state } = useDuel();
   const now = useServerClock(50);
-  const match = state.match!;
+  const { t } = useI18n();
+  // Beim Mounten festhalten: Während der Exit-Animation rendert die Ansicht weiter, obwohl der Zustand schon zurückgesetzt sein kann.
+  const [match] = useState(() => state.match!);
   const remaining = match.startsAt - now;
   const countdown = remaining <= 3000 ? Math.max(1, Math.ceil(remaining / 1000)) : null;
 
@@ -51,12 +55,12 @@ export function VersusIntro() {
     >
       <div className="text-muted-foreground mb-10 text-sm font-semibold tracking-[0.4em] uppercase">
         <motion.span initial={{ opacity: 0, letterSpacing: "1em" }} animate={{ opacity: 1, letterSpacing: "0.4em" }}>
-          Gegner gefunden
+          {t.intro.found}
         </motion.span>
       </div>
 
       <div className="flex w-full max-w-4xl flex-col items-center gap-8 md:flex-row md:gap-4">
-        <PlayerCard player={match.you} side="left" label="Du" />
+        <PlayerCard player={match.you} side="left" label={t.common.you} />
         <motion.div
           initial={{ scale: 4, opacity: 0, rotate: -20 }}
           animate={{ scale: 1, opacity: 1, rotate: 0 }}
@@ -64,10 +68,10 @@ export function VersusIntro() {
           className="relative shrink-0 px-6"
         >
           <span className="text-6xl font-black italic md:text-7xl">
-            VS
+            {t.common.vs}
           </span>
         </motion.div>
-        <PlayerCard player={match.opponent} side="right" label="Gegner" />
+        <PlayerCard player={match.opponent} side="right" label={t.common.opponent} />
       </div>
 
       <motion.p
@@ -76,7 +80,7 @@ export function VersusIntro() {
         transition={{ delay: 1.2 }}
         className="text-muted-foreground mt-10 text-center text-sm"
       >
-        60 Sekunden · Flaggen & Umrisse · wer mehr richtig hat, gewinnt
+        {t.intro.rules}
       </motion.p>
 
       <div className="mt-4 grid h-28 place-items-center">

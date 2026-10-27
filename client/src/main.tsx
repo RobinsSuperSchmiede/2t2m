@@ -10,6 +10,8 @@ import { AppLayout } from "@/components/layout";
 import { api } from "@/lib/api";
 import { AuthProvider } from "@/lib/auth";
 import { DuelProvider } from "@/lib/duel";
+import { I18nProvider } from "@/lib/i18n";
+import { ThemeProvider } from "@/lib/theme";
 import { HistoryPage } from "@/pages/history";
 import { LeaderboardPage } from "@/pages/leaderboard";
 import { PlayPage } from "@/pages/play";
@@ -64,13 +66,17 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <GoogleProvider>
-        <TooltipProvider>
-          <RouterProvider router={router} />
-          <Toaster position="top-center" richColors />
-        </TooltipProvider>
-      </GoogleProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <I18nProvider>
+        <QueryClientProvider client={queryClient}>
+          <GoogleProvider>
+            <TooltipProvider>
+              <RouterProvider router={router} />
+              <Toaster position="top-center" richColors />
+            </TooltipProvider>
+          </GoogleProvider>
+        </QueryClientProvider>
+      </I18nProvider>
+    </ThemeProvider>
   </StrictMode>,
 );

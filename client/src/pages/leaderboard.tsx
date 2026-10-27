@@ -9,12 +9,14 @@ import { InlineAd } from "@/components/ads";
 import { PlayerAvatar, RankBadge } from "@/components/player";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 const PODIUM = ["text-foreground", "text-muted-foreground", "text-muted-foreground"];
 
 export function LeaderboardPage() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const { data, isLoading } = useQuery({
     queryKey: ["leaderboard", DEFAULT_MODE],
     queryFn: () => api.leaderboard(DEFAULT_MODE),
@@ -23,8 +25,8 @@ export function LeaderboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Rangliste</h1>
-        <p className="text-muted-foreground mt-1">Die besten 100 Spieler in Flaggen & Umrisse.</p>
+        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{t.leaderboard.title}</h1>
+        <p className="text-muted-foreground mt-1">{t.leaderboard.subtitle}</p>
       </div>
 
       {data && data.length >= 3 && (
@@ -55,8 +57,8 @@ export function LeaderboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Alle Spieler</CardTitle>
-          <CardDescription>Nur Spieler mit mindestens einem Duell</CardDescription>
+          <CardTitle>{t.leaderboard.allPlayers}</CardTitle>
+          <CardDescription>{t.leaderboard.allPlayersHint}</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -70,10 +72,10 @@ export function LeaderboardPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-14">#</TableHead>
-                  <TableHead>Spieler</TableHead>
-                  <TableHead className="hidden sm:table-cell">Rang</TableHead>
-                  <TableHead className="hidden text-right sm:table-cell">Duelle</TableHead>
-                  <TableHead className="text-right">Siege</TableHead>
+                  <TableHead>{t.leaderboard.player}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t.leaderboard.rank}</TableHead>
+                  <TableHead className="hidden text-right sm:table-cell">{t.leaderboard.duels}</TableHead>
+                  <TableHead className="text-right">{t.leaderboard.wins}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -99,7 +101,7 @@ export function LeaderboardPage() {
                 {data?.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={5} className="text-muted-foreground py-10 text-center">
-                      Noch niemand hat gespielt – sei der Erste!
+                      {t.leaderboard.empty}
                     </TableCell>
                   </TableRow>
                 )}

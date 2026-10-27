@@ -30,6 +30,7 @@ import { AuthGate } from "@/components/auth-gate";
 import { MatchRow } from "@/components/match-row";
 import { RankBadge, TierProgress } from "@/components/player";
 import { api } from "@/lib/api";
+import { useI18n } from "@/lib/i18n";
 
 const chartConfig = { rating: { label: "Rating", color: "var(--chart-1)" } } satisfies ChartConfig;
 
@@ -50,11 +51,10 @@ function StatCard({ icon: Icon, label, value, hint }: { icon: typeof Trophy; lab
 }
 
 function RatingChart({ data }: { data: RatingPoint[] }) {
+  const { t, lang } = useI18n();
   if (data.length < 2) {
     return (
-      <div className="text-muted-foreground grid h-56 place-items-center text-sm">
-        Spiele ein paar Duelle, um deinen Verlauf zu sehen.
-      </div>
+      <div className="text-muted-foreground grid h-56 place-items-center text-sm">{t.stats.chartEmpty}</div>
     );
   }
   const points = data.map((p, i) => ({ ...p, game: i }));
@@ -75,7 +75,7 @@ function RatingChart({ data }: { data: RatingPoint[] }) {
             <ChartTooltipContent
               labelFormatter={(_, payload) => {
                 const at = payload?.[0]?.payload?.at as string | undefined;
-                return at ? new Date(at).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" }) : "";
+                return at ? new Date(at).toLocaleString(lang, { dateStyle: "short", timeStyle: "short" }) : "";
               }}
             />
           }
@@ -87,6 +87,7 @@ function RatingChart({ data }: { data: RatingPoint[] }) {
 }
 
 function CountryList({ title, icon: Icon, items, empty }: { title: string; icon: typeof Trophy; items: CountryStat[]; empty: string }) {
+  const { local } = useI18n();
   return (
     <Card>
       <CardHeader>
@@ -101,7 +102,7 @@ function CountryList({ title, icon: Icon, items, empty }: { title: string; icon:
           return (
             <div key={c.code} className="space-y-1.5">
               <div className="flex items-center justify-between gap-2 text-sm">
-                <span className="truncate font-medium">{c.name}</span>
+                <span className="truncate font-medium">{local(c.name)}</span>
                 <span className="text-muted-foreground shrink-0 tabular-nums">
                   {pct}% · {c.correct}/{c.total}
                 </span>
@@ -116,40 +117,41 @@ function CountryList({ title, icon: Icon, items, empty }: { title: string; icon:
 }
 
 function ProDetails({ details }: { details: DashboardDetails }) {
+  const { t, fmt } = useI18n();
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
         <StatCard
           icon={Target}
-          label="Trefferquote"
+          label={t.stats.accuracy}
           value={details.accuracy !== null ? `${Math.round(details.accuracy * 100)}%` : "–"}
-          hint="über alle Antworten"
+          hint={t.stats.accuracyHint}
         />
         <StatCard
           icon={Gauge}
-          label="Ø Antwortzeit"
+          label={t.stats.avgTime}
           value={details.avgAnswerMs !== null ? `${(details.avgAnswerMs / 1000).toFixed(1)} s` : "–"}
-          hint="inkl. Strafzeit"
+          hint={t.stats.avgTimeHint}
         />
         <StatCard
           icon={Medal}
-          label="Bestleistung"
+          label={t.stats.best}
           value={details.bestScore !== null ? String(details.bestScore) : "–"}
-          hint="richtige in 60 s"
+          hint={t.stats.bestHint}
         />
         <StatCard
           icon={Hash}
-          label="Ø Punkte"
+          label={t.stats.avgScore}
           value={details.avgScore !== null ? details.avgScore.toFixed(1) : "–"}
-          hint="pro Duell"
+          hint={t.stats.avgScoreHint}
         />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Rating-Verlauf</CardTitle>
-            <CardDescription>Deine letzten {Math.max(0, details.ratingHistory.length - 1)} Duelle</CardDescription>
+            <CardTitle>{t.stats.ratingHistory}</CardTitle>
+            <CardDescription>{fmt(t.stats.lastDuels, { count: Math.max(0, details.ratingHistory.length - 1) })}</CardDescription>
           </CardHeader>
           <CardContent>
             <RatingChart data={details.ratingHistory} />
@@ -157,8 +159,8 @@ function ProDetails({ details }: { details: DashboardDetails }) {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Fragetypen</CardTitle>
-            <CardDescription>Trefferquote nach Typ</CardDescription>
+            <CardTitle>{t.stats.questionTypes}</CardTitle>
+            <CardDescription>{t.stats.questionTypesHint}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             {details.kindAccuracy.map((k) => {
@@ -168,7 +170,7 @@ function ProDetails({ details }: { details: DashboardDetails }) {
                   <div className="flex items-center justify-between text-sm">
                     <span className="flex items-center gap-2 font-medium">
                       {k.kind === "flag" ? <Flag className="size-4" /> : <Map className="size-4" />}
-                      {k.kind === "flag" ? "Flaggen" : "Umrisse"}
+                      {k.kind === "flag" ? t.mode.flags : t.mode.outlines}
                     </span>
                     <span className="text-muted-foreground tabular-nums">
                       {k.total > 0 ? `${pct}% · ${k.correct}/${k.total}` : "–"}
@@ -184,16 +186,16 @@ function ProDetails({ details }: { details: DashboardDetails }) {
 
       <div className="grid gap-4 md:grid-cols-2">
         <CountryList
-          title="Hier patzt du am häufigsten"
+          title={t.stats.weakest}
           icon={TrendingDown}
           items={details.weakestCountries}
-          empty="Noch zu wenige Daten – ein Land braucht mindestens zwei Begegnungen."
+          empty={t.stats.notEnoughData}
         />
         <CountryList
-          title="Deine sichersten Länder"
+          title={t.stats.strongest}
           icon={TrendingUp}
           items={details.strongestCountries}
-          empty="Noch zu wenige Daten – ein Land braucht mindestens zwei Begegnungen."
+          empty={t.stats.notEnoughData}
         />
       </div>
     </div>
@@ -201,6 +203,7 @@ function ProDetails({ details }: { details: DashboardDetails }) {
 }
 
 function ProLocked() {
+  const { t } = useI18n();
   return (
     <Card className="relative overflow-hidden">
       {/* Angedeuteter Inhalt im Hintergrund */}
@@ -218,14 +221,14 @@ function ProLocked() {
             <Lock className="size-4" />
           </div>
           <div>
-            <div className="font-semibold">Detaillierte Statistiken mit Pro</div>
+            <div className="font-semibold">{t.stats.lockedTitle}</div>
             <p className="text-muted-foreground mt-1 text-sm">
-              Rating-Verlauf, Trefferquote pro Fragetyp, Antwortzeit und deine schwächsten Länder.
+              {t.stats.lockedText}
             </p>
           </div>
           <Button asChild>
             <Link to="/pro">
-              <Crown /> Pro freischalten
+              <Crown /> {t.stats.unlock}
             </Link>
           </Button>
         </div>
@@ -235,6 +238,7 @@ function ProLocked() {
 }
 
 function StatsContent() {
+  const { t, fmt } = useI18n();
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard", DEFAULT_MODE],
     queryFn: () => api.dashboard(DEFAULT_MODE),
@@ -261,7 +265,7 @@ function StatsContent() {
       <div className="grid gap-4 lg:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardDescription>Dein Rating</CardDescription>
+            <CardDescription>{t.stats.yourRating}</CardDescription>
             <CardTitle className="text-4xl font-bold tabular-nums">{stats.rating}</CardTitle>
             <CardAction>
               <RankBadge rating={stats.rating} showRating={false} />
@@ -271,43 +275,43 @@ function StatsContent() {
             <TierProgress rating={stats.rating} />
             <div className="text-muted-foreground grid grid-cols-2 gap-2 text-sm">
               <div>
-                Höchstwert <div className="text-foreground font-semibold">{stats.peakRating}</div>
+                {t.stats.peak} <div className="text-foreground font-semibold">{stats.peakRating}</div>
               </div>
               <div>
-                Globaler Platz <div className="text-foreground font-semibold">{stats.rank ? `#${stats.rank}` : "–"}</div>
+                {t.stats.globalRank} <div className="text-foreground font-semibold">{stats.rank ? `#${stats.rank}` : "–"}</div>
               </div>
             </div>
           </CardContent>
         </Card>
         <div className="grid grid-cols-2 gap-3 md:gap-4 lg:col-span-2">
-          <StatCard icon={Swords} label="Duelle" value={String(stats.games)} />
+          <StatCard icon={Swords} label={t.stats.duels} value={String(stats.games)} />
           <StatCard
             icon={Trophy}
-            label="Siegquote"
+            label={t.stats.winrate}
             value={winrate !== null ? `${winrate}%` : "–"}
-            hint={`${stats.wins} S · ${stats.losses} N · ${stats.draws} U`}
+            hint={fmt(t.stats.record, { wins: stats.wins, losses: stats.losses, draws: stats.draws })}
           />
           <StatCard
             icon={Flame}
-            label="Serie"
+            label={t.stats.streak}
             value={streak.count > 0 ? String(streak.count) : "–"}
             hint={
               streak.type === "win"
-                ? "Siege in Folge"
+                ? t.stats.streakWin
                 : streak.type === "loss"
-                  ? "Niederlagen in Folge"
+                  ? t.stats.streakLoss
                   : streak.type === "draw"
-                    ? "Unentschieden in Folge"
-                    : "noch keine Duelle"
+                    ? t.stats.streakDraw
+                    : t.stats.streakNone
             }
           />
-          <StatCard icon={Medal} label="Höchstes Rating" value={String(stats.peakRating)} />
+          <StatCard icon={Medal} label={t.stats.highestRating} value={String(stats.peakRating)} />
         </div>
       </div>
 
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
-          Details <Crown className="text-muted-foreground size-4" />
+          {t.stats.details} <Crown className="text-muted-foreground size-4" />
         </h2>
         {details ? <ProDetails details={details} /> : <ProLocked />}
       </section>
@@ -316,11 +320,11 @@ function StatsContent() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Letzte Duelle</CardTitle>
+          <CardTitle>{t.stats.recent}</CardTitle>
           <CardAction>
             <Button variant="ghost" size="sm" asChild>
               <Link to="/history">
-                Alle <ArrowRight />
+                {t.stats.all} <ArrowRight />
               </Link>
             </Button>
           </CardAction>
@@ -329,7 +333,7 @@ function StatsContent() {
           {data.recentMatches.length ? (
             data.recentMatches.map((m) => <MatchRow key={m.id} match={m} />)
           ) : (
-            <p className="text-muted-foreground px-3 py-6 text-center text-sm">Noch keine Duelle gespielt.</p>
+            <p className="text-muted-foreground px-3 py-6 text-center text-sm">{t.stats.empty}</p>
           )}
         </CardContent>
       </Card>
@@ -338,16 +342,17 @@ function StatsContent() {
 }
 
 export function StatsPage() {
+  const { t } = useI18n();
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Statistiken</h1>
-        <p className="text-muted-foreground mt-1">Flaggen & Umrisse · Ranked</p>
+        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{t.stats.title}</h1>
+        <p className="text-muted-foreground mt-1">{t.mode.ranked}</p>
       </div>
       <AuthGate
         icon={BarChart3}
-        title="Deine Statistiken"
-        description="Melde dich an, um Rating, Rang und Verlauf zu sehen."
+        title={t.stats.gateTitle}
+        description={t.stats.gateDescription}
       >
         <StatsContent />
       </AuthGate>

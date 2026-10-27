@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
-import { DEFAULT_MODE, MODES } from "@2t2m/shared";
+import { DEFAULT_MODE } from "@2t2m/shared";
 import { BookOpen, Clock, Crown, Flag, Globe2, Loader2, Lock, Map, Medal, Swords, Timer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,31 +16,33 @@ import { formatCountdown, useCooldown } from "@/hooks/use-cooldown";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useDuel } from "@/lib/duel";
+import { useI18n } from "@/lib/i18n";
 
 const UPCOMING = [
-  { icon: BookOpen, name: "Geschichte" },
-  { icon: Globe2, name: "Hauptstädte" },
-  { icon: Medal, name: "Sport" },
-];
+  { icon: BookOpen, name: "history" },
+  { icon: Globe2, name: "capitals" },
+  { icon: Medal, name: "sport" },
+] as const;
 
 /** Hauptaktion: Spielen, Anmelden oder – für kostenlose Spieler – Wartezeit bis zum nächsten Duell. */
 function PlayAction() {
   const { user, requireLogin } = useAuth();
   const { joinQueue, state } = useDuel();
   const cooldown = useCooldown();
+  const { t } = useI18n();
 
   if (user && cooldown > 0) {
     return (
       <div className="flex w-full max-w-sm flex-col items-center gap-4">
         <div className="bg-card w-full rounded-xl border p-5">
           <div className="text-muted-foreground flex items-center justify-center gap-2 text-sm">
-            <Clock className="size-4" /> Nächstes kostenloses Duell in
+            <Clock className="size-4" /> {t.play.nextFreeIn}
           </div>
           <div className="mt-1 font-mono text-4xl font-bold tabular-nums">{formatCountdown(cooldown)}</div>
         </div>
         <Button size="lg" className="w-full" asChild>
           <Link to="/pro">
-            <Crown /> Mit Pro sofort weiterspielen
+            <Crown /> {t.play.continueWithPro}
           </Link>
         </Button>
       </div>
@@ -56,14 +58,10 @@ function PlayAction() {
         onClick={() => requireLogin(() => joinQueue(DEFAULT_MODE))}
       >
         {user && !state.connected ? <Loader2 className="animate-spin" /> : <Swords />}
-        Spielen
+        {t.play.play}
       </Button>
       <p className="text-muted-foreground text-xs">
-        {!user
-          ? "Anmelden und sofort loslegen"
-          : user.pro
-            ? "Pro · unbegrenzt spielen"
-            : "Kostenlos: 1 Duell pro Stunde"}
+        {!user ? t.play.signInHint : user.pro ? t.play.proHint : t.play.freeHint}
       </p>
     </div>
   );
@@ -76,7 +74,7 @@ function IdleView() {
     queryFn: () => api.dashboard(DEFAULT_MODE),
     enabled: Boolean(user),
   });
-  const mode = MODES[DEFAULT_MODE];
+  const { t } = useI18n();
 
   return (
     <motion.div
@@ -87,9 +85,9 @@ function IdleView() {
       className="mx-auto flex max-w-2xl flex-col items-center gap-8 pt-4 text-center md:pt-12"
     >
       <div className="space-y-4">
-        <Badge variant="outline">Geografie · Ranked</Badge>
-        <h1 className="text-4xl font-bold tracking-tight md:text-5xl">{mode.name}</h1>
-        <p className="text-muted-foreground mx-auto max-w-md">{mode.description}</p>
+        <Badge variant="outline">{t.mode.badge}</Badge>
+        <h1 className="text-4xl font-bold tracking-tight md:text-5xl">{t.mode.name}</h1>
+        <p className="text-muted-foreground mx-auto max-w-md">{t.mode.description}</p>
         {dashboard.data && (
           <div className="flex justify-center">
             <RankBadge rating={dashboard.data.stats.rating} />
@@ -102,9 +100,9 @@ function IdleView() {
       <Card className="w-full py-4">
         <CardContent className="grid grid-cols-3 gap-2 px-4 text-sm">
           {[
-            { icon: Timer, label: "60 Sekunden" },
-            { icon: Flag, label: "Flaggen" },
-            { icon: Map, label: "Umrisse" },
+            { icon: Timer, label: t.mode.seconds60 },
+            { icon: Flag, label: t.mode.flags },
+            { icon: Map, label: t.mode.outlines },
           ].map(({ icon: Icon, label }) => (
             <div key={label} className="text-muted-foreground flex flex-col items-center gap-1.5 sm:flex-row sm:justify-center">
               <Icon className="text-foreground size-4" /> {label}
@@ -116,7 +114,7 @@ function IdleView() {
       <div className="flex flex-wrap justify-center gap-2">
         {UPCOMING.map(({ icon: Icon, name }) => (
           <Badge key={name} variant="outline" className="text-muted-foreground gap-1.5">
-            <Icon className="size-3" /> {name} <Lock className="size-3" />
+            <Icon className="size-3" /> {t.topics[name]} <Lock className="size-3" />
           </Badge>
         ))}
       </div>

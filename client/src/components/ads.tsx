@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { Check } from "lucide-react";
 import { PRO_PRICE_LABEL } from "@2t2m/shared";
 import { useAuth } from "@/lib/auth";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 // Optional: Google AdSense. Ohne Konfiguration wird eine eigene Anzeige für Pro gezeigt.
@@ -57,12 +58,13 @@ function AdSense({ slot, className }: { slot: string; className?: string }) {
 }
 
 function AdLabel() {
-  return <span className="text-muted-foreground text-[10px] tracking-widest uppercase">Anzeige</span>;
+  const { t } = useI18n();
+  return <span className="text-muted-foreground text-[10px] tracking-widest uppercase">{t.ads.label}</span>;
 }
 
-const BENEFITS = ["Unbegrenzt spielen", "Detaillierte Statistiken", "Keine Werbung"];
-
 function HouseAd({ variant }: { variant: "rail" | "inline" }) {
+  const { t } = useI18n();
+  const benefits = [t.ads.unlimited, t.ads.detailedStats, t.ads.noAds];
   return (
     <Link
       to="/pro"
@@ -73,17 +75,17 @@ function HouseAd({ variant }: { variant: "rail" | "inline" }) {
     >
       <div className="space-y-1">
         <div className="text-sm font-semibold">2T2M Pro</div>
-        <div className="text-muted-foreground text-xs">{PRO_PRICE_LABEL} / Monat</div>
+        <div className="text-muted-foreground text-xs">{PRO_PRICE_LABEL} {t.common.perMonth}</div>
       </div>
       <ul className={cn("text-muted-foreground space-y-1.5 text-xs", variant === "inline" && "hidden sm:block")}>
-        {BENEFITS.map((b) => (
+        {benefits.map((b) => (
           <li key={b} className="flex items-center gap-1.5">
             <Check className="text-foreground size-3" /> {b}
           </li>
         ))}
       </ul>
       <span className="bg-primary text-primary-foreground inline-flex h-8 items-center rounded-md px-3 text-xs font-medium">
-        Upgrade
+        {t.ads.upgrade}
       </span>
     </Link>
   );
@@ -91,8 +93,9 @@ function HouseAd({ variant }: { variant: "rail" | "inline" }) {
 
 /** Schmale Spalte am linken oder rechten Rand – nur auf breiten Bildschirmen, damit das Spiel frei bleibt. */
 export function AdRail() {
+  const { t } = useI18n();
   return (
-    <aside className="hidden w-40 shrink-0 xl:block" aria-label="Anzeige">
+    <aside className="hidden w-40 shrink-0 xl:block" aria-label={t.ads.label}>
       <div className="sticky top-24 space-y-1.5 py-8">
         <AdLabel />
         {ADSENSE_CLIENT && ADSENSE_SLOT_RAIL ? (
@@ -108,9 +111,10 @@ export function AdRail() {
 /** Kleine Anzeige im Inhalt für schmale Bildschirme, auf denen keine Randspalte Platz hat. */
 export function InlineAd({ className }: { className?: string }) {
   const show = useShowAds();
+  const { t } = useI18n();
   if (!show) return null;
   return (
-    <div className={cn("space-y-1.5 xl:hidden", className)} aria-label="Anzeige">
+    <div className={cn("space-y-1.5 xl:hidden", className)} aria-label={t.ads.label}>
       <AdLabel />
       {ADSENSE_CLIENT && ADSENSE_SLOT_INLINE ? (
         <AdSense slot={ADSENSE_SLOT_INLINE} className="h-[100px] w-full" />

@@ -6,14 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PlayerAvatar, RankBadge } from "@/components/player";
 import { useAuth } from "@/lib/auth";
 import { useDuel, useServerClock } from "@/lib/duel";
-
-const TIPS = [
-  "Falsche Antworten sperren dich für eine Sekunde – lieber kurz nachdenken.",
-  "Mit den Tasten 1–4 antwortest du blitzschnell.",
-  "Umrisse zeigen nur das Kernland – Überseegebiete sind ausgeblendet.",
-  "Gegen stärkere Gegner gewinnst du mehr Punkte.",
-  "Je länger du wartest, desto größer wird der Suchbereich.",
-];
+import { useI18n } from "@/lib/i18n";
 
 function formatWait(ms: number) {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -23,12 +16,14 @@ function formatWait(ms: number) {
 export function SearchingView() {
   const { user } = useAuth();
   const { state, leaveQueue } = useDuel();
+  const { t, fmt } = useI18n();
+  const tips = t.searching.tips;
   const now = useServerClock(250);
   const [tip, setTip] = useState(0);
   useEffect(() => {
-    const id = setInterval(() => setTip((t) => (t + 1) % TIPS.length), 4500);
+    const id = setInterval(() => setTip((i) => (i + 1) % tips.length), 4500);
     return () => clearInterval(id);
-  }, []);
+  }, [tips.length]);
 
   const queue = state.queue;
   const waited = queue ? Math.max(0, now - queue.since) : 0;
@@ -58,7 +53,7 @@ export function SearchingView() {
 
       <div className="space-y-3">
         <h2 className="flex items-center justify-center gap-2 text-2xl font-bold">
-          <Loader2 className="text-muted-foreground size-5 animate-spin" /> Suche Gegner…
+          <Loader2 className="text-muted-foreground size-5 animate-spin" /> {t.searching.title}
         </h2>
         <div className="text-muted-foreground flex items-center justify-center gap-3 text-sm">
           <span className="font-mono text-foreground text-lg tabular-nums">{formatWait(waited)}</span>
@@ -67,7 +62,7 @@ export function SearchingView() {
               <span>·</span>
               <RankBadge rating={queue.rating} />
               <span>·</span>
-              <span>Suchbereich ±{matchmakingRange(waited)}</span>
+              <span>{fmt(t.searching.range, { range: matchmakingRange(waited) })}</span>
             </>
           )}
         </div>
@@ -77,12 +72,12 @@ export function SearchingView() {
           animate={{ opacity: 1, y: 0 }}
           className="text-muted-foreground mx-auto max-w-sm text-sm"
         >
-          {TIPS[tip]}
+          {tips[tip]}
         </motion.p>
       </div>
 
       <Button variant="outline" onClick={leaveQueue}>
-        <X /> Abbrechen
+        <X /> {t.searching.cancel}
       </Button>
     </motion.div>
   );

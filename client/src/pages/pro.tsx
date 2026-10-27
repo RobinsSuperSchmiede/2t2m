@@ -10,22 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-
-const BENEFITS = [
-  { icon: InfinityIcon, title: "Unbegrenzte Spielzeit", text: "Spiele so viele Duelle hintereinander, wie du willst." },
-  { icon: BarChart3, title: "Detaillierte Statistiken", text: "Rating-Verlauf, Antwortzeit, Fragetypen und deine schwächsten Länder." },
-  { icon: ShieldOff, title: "Komplett werbefrei", text: "Keine Anzeigen – nirgends." },
-];
-
-const COMPARISON: { label: string; free: string | boolean; pro: string | boolean }[] = [
-  { label: "Ranked-Duelle", free: "1 pro Stunde", pro: "Unbegrenzt" },
-  { label: "Rating, Rang & Verlauf", free: true, pro: true },
-  { label: "Detaillierte Statistiken", free: false, pro: true },
-  { label: "Werbefrei", free: false, pro: true },
-];
-
-const dateFormat = new Intl.DateTimeFormat("de-DE", { dateStyle: "long" });
 
 function Cell({ value }: { value: string | boolean }) {
   if (value === true) return <Check className="mx-auto size-4" />;
@@ -39,6 +25,23 @@ export function ProPage() {
   const [params, setParams] = useSearchParams();
   const [syncing, setSyncing] = useState(false);
   const synced = useRef(false);
+  const { t, fmt, lang, errorText } = useI18n();
+  // Toasts im Effekt sollen die aktuelle Sprache nutzen, ohne den Effekt neu auszulösen.
+  const tRef = useRef(t);
+  tRef.current = t;
+
+  const benefits = [
+    { icon: InfinityIcon, title: t.pro.benefitUnlimitedTitle, text: t.pro.benefitUnlimitedText },
+    { icon: BarChart3, title: t.pro.benefitStatsTitle, text: t.pro.benefitStatsText },
+    { icon: ShieldOff, title: t.pro.benefitAdsTitle, text: t.pro.benefitAdsText },
+  ];
+  const comparison: { label: string; free: string | boolean; pro: string | boolean }[] = [
+    { label: t.pro.rowRanked, free: t.pro.rowRankedFree, pro: t.pro.rowRankedPro },
+    { label: t.pro.rowRating, free: true, pro: true },
+    { label: t.pro.rowStats, free: false, pro: true },
+    { label: t.pro.rowAdFree, free: false, pro: true },
+  ];
+  const formatDate = (iso: string) => new Intl.DateTimeFormat(lang, { dateStyle: "long" }).format(new Date(iso));
 
   // Rückkehr vom Stripe-Checkout: Abo sofort abgleichen, statt auf den Webhook zu warten.
   useEffect(() => {
@@ -47,7 +50,7 @@ export function ProPage() {
     if (!status || !user || synced.current) return;
     synced.current = true;
     if (status === "cancel") {
-      toast("Checkout abgebrochen – es wurde nichts berechnet.");
+      toast(tRef.current.pro.checkoutCancelled);
       setParams({}, { replace: true });
       return;
     }
@@ -57,31 +60,31 @@ export function ProPage() {
         .syncCheckout(sessionId)
         .then((u) => {
           setUser(u);
-          if (u.pro) toast.success("Willkommen bei Pro!");
-          else toast("Zahlung eingegangen – Pro wird in Kürze aktiviert.");
+          if (u.pro) toast.success(tRef.current.pro.welcome);
+          else toast(tRef.current.pro.paymentPending);
         })
-        .catch((err: Error) => toast.error(err.message))
+        .catch((err: Error) => toast.error(errorText(err)))
         .finally(() => {
           setSyncing(false);
           setParams({}, { replace: true });
         });
     }
-  }, [params, user, setParams, setUser]);
+  }, [params, user, setParams, setUser, errorText]);
 
   const checkout = useMutation({
     mutationFn: api.checkout,
     onSuccess: ({ url }) => window.location.assign(url),
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error(errorText(err)),
   });
   const portal = useMutation({
     mutationFn: api.portal,
     onSuccess: ({ url }) => window.location.assign(url),
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error(errorText(err)),
   });
   const devToggle = useMutation({
     mutationFn: api.devTogglePro,
     onSuccess: (u) => setUser(u),
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error(errorText(err)),
   });
 
   const stripeEnabled = config.data?.stripeEnabled ?? false;
@@ -94,8 +97,8 @@ export function ProPage() {
         <Badge variant="outline" className="gap-1">
           <Crown className="size-3" /> 2T2M Pro
         </Badge>
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Spiel ohne Grenzen</h1>
-        <p className="text-muted-foreground">Unbegrenzt duellieren, tiefer analysieren, keine Werbung.</p>
+        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{t.pro.headline}</h1>
+        <p className="text-muted-foreground">{t.pro.subline}</p>
       </motion.div>
 
       <div className="grid gap-4 md:grid-cols-5">
@@ -103,12 +106,12 @@ export function ProPage() {
           <CardHeader>
             <CardTitle className="flex items-baseline gap-1">
               <span className="text-4xl font-bold">{PRO_PRICE_LABEL}</span>
-              <span className="text-muted-foreground text-base font-normal">/ Monat</span>
+              <span className="text-muted-foreground text-base font-normal">{t.common.perMonth}</span>
             </CardTitle>
-            <CardDescription>Monatlich kündbar · sichere Zahlung über Stripe</CardDescription>
+            <CardDescription>{t.pro.cancelAnytime}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {BENEFITS.map(({ icon: Icon, title, text }) => (
+            {benefits.map(({ icon: Icon, title, text }) => (
               <div key={title} className="flex gap-3">
                 <div className="bg-muted grid size-9 shrink-0 place-items-center rounded-md border">
                   <Icon className="size-4" />
@@ -123,40 +126,39 @@ export function ProPage() {
           <CardFooter className="flex-col items-stretch gap-3">
             {!user ? (
               <Button size="lg" onClick={() => requireLogin()}>
-                Anmelden & Pro holen
+                {t.pro.signInAndGet}
               </Button>
             ) : user.pro ? (
               <>
                 <div className="bg-muted/50 rounded-md border p-3 text-sm">
                   <div className="flex items-center gap-2 font-medium">
-                    <Check className="text-success size-4" /> Pro ist aktiv
+                    <Check className="text-success size-4" /> {t.pro.active}
                   </div>
                   {sub?.periodEnd && (
                     <div className="text-muted-foreground mt-1">
-                      {sub.cancelAtPeriodEnd ? "Endet am " : "Verlängert sich am "}
-                      {dateFormat.format(new Date(sub.periodEnd))}
+                      {fmt(sub.cancelAtPeriodEnd ? t.pro.endsOn : t.pro.renewsOn, { date: formatDate(sub.periodEnd) })}
                     </div>
                   )}
                 </div>
                 <Button size="lg" variant="outline" disabled={!stripeEnabled || busy} onClick={() => portal.mutate()}>
                   {portal.isPending && <Loader2 className="animate-spin" />}
-                  Abo verwalten oder kündigen
+                  {t.pro.manage}
                 </Button>
               </>
             ) : (
               <Button size="lg" disabled={!stripeEnabled || busy} onClick={() => checkout.mutate()}>
                 {busy ? <Loader2 className="animate-spin" /> : <Crown />}
-                {syncing ? "Zahlung wird geprüft…" : `Pro holen · ${PRO_PRICE_LABEL}/Monat`}
+                {syncing ? t.pro.verifying : fmt(t.pro.get, { price: PRO_PRICE_LABEL })}
               </Button>
             )}
             {config.data && !stripeEnabled && (
               <p className="text-muted-foreground text-center text-xs">
-                Zahlungen sind noch nicht eingerichtet (<code className="font-mono">STRIPE_SECRET_KEY</code> fehlt).
+                {fmt(t.pro.notConfigured, { key: "STRIPE_SECRET_KEY" })}
               </p>
             )}
             {user && config.data?.devLogin && (
               <Button variant="ghost" size="sm" disabled={devToggle.isPending} onClick={() => devToggle.mutate()}>
-                Dev: Pro {user.pro ? "deaktivieren" : "aktivieren"} (ohne Zahlung)
+                {user.pro ? t.pro.devToggleOff : t.pro.devToggleOn}
               </Button>
             )}
           </CardFooter>
@@ -171,7 +173,7 @@ export function ProPage() {
               <span />
               <span className="text-muted-foreground w-16 text-center text-xs font-medium uppercase">Free</span>
               <span className="w-16 text-center text-xs font-medium uppercase">Pro</span>
-              {COMPARISON.map((row) => (
+              {comparison.map((row) => (
                 <div key={row.label} className="contents">
                   <span>{row.label}</span>
                   <span className={cn("text-muted-foreground w-16 text-center text-xs")}>

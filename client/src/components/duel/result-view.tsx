@@ -10,6 +10,7 @@ import { RatingDelta } from "@/components/match-row";
 import { PlayerAvatar, RankBadge } from "@/components/player";
 import { formatCountdown, useCooldown } from "@/hooks/use-cooldown";
 import { useDuel } from "@/lib/duel";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 function AnimatedNumber({ from, to, delay = 0 }: { from: number; to: number; delay?: number }) {
@@ -26,19 +27,19 @@ function AnimatedNumber({ from, to, delay = 0 }: { from: number; to: number; del
   return <>{value}</>;
 }
 
-const HEADLINES = {
-  win: { text: "Sieg", className: "text-success glow-text-success" },
-  loss: { text: "Niederlage", className: "text-danger glow-text-danger" },
-  draw: { text: "Unentschieden", className: "text-foreground" },
+const HEADLINE_CLASS = {
+  win: "text-success glow-text-success",
+  loss: "text-danger glow-text-danger",
+  draw: "text-foreground",
 };
 
 export function ResultView() {
   const { state, joinQueue, reset } = useDuel();
   const navigate = useNavigate();
   const cooldown = useCooldown();
-  const result = state.result!;
-  const match = state.match!;
-  const headline = HEADLINES[result.outcome];
+  const { t, fmt } = useI18n();
+  // Beim Mounten festhalten: Während der Exit-Animation rendert die Ansicht weiter, obwohl der Zustand schon zurückgesetzt sein kann.
+  const [{ result, match }] = useState(() => ({ result: state.result!, match: state.match! }));
   const tierBefore = getTier(result.you.ratingBefore);
   const tierAfter = getTier(result.you.ratingAfter);
   const tierChanged = tierBefore.id !== tierAfter.id;
@@ -71,14 +72,14 @@ export function ResultView() {
           transition={{ type: "spring", stiffness: 220, damping: 12 }}
           className={cn(
             "pb-2 text-6xl font-black tracking-tight md:text-7xl",
-            headline.className,
+            HEADLINE_CLASS[result.outcome],
           )}
         >
-          {headline.text}
+          {t.outcome[result.outcome]}
         </motion.h1>
         {result.forfeit && (
           <p className="text-muted-foreground">
-            {result.outcome === "win" ? "Dein Gegner hat aufgegeben." : "Du hast aufgegeben."}
+            {result.outcome === "win" ? t.result.opponentForfeited : t.result.youForfeited}
           </p>
         )}
       </div>
@@ -91,9 +92,9 @@ export function ResultView() {
       >
         <Card className="flex-row items-center justify-between gap-4 px-6 py-6 md:px-10">
           {[
-            { player: match.you, score: result.you.score, color: "text-foreground", label: "Du" },
+            { player: match.you, score: result.you.score, color: "text-foreground" },
             null,
-            { player: match.opponent, score: result.opponent.score, color: "text-muted-foreground", label: "Gegner" },
+            { player: match.opponent, score: result.opponent.score, color: "text-muted-foreground" },
           ].map((item, i) =>
             item ? (
               <div key={i} className="flex min-w-0 flex-1 flex-col items-center gap-2">
@@ -105,7 +106,7 @@ export function ResultView() {
               </div>
             ) : (
               <span key={i} className="text-muted-foreground text-2xl font-black italic">
-                VS
+                {t.common.vs}
               </span>
             ),
           )}
@@ -119,14 +120,14 @@ export function ResultView() {
         className="grid w-full gap-4 sm:grid-cols-3"
       >
         <Card className="items-center gap-1 py-5">
-          <span className="text-muted-foreground text-xs">Neues Rating</span>
+          <span className="text-muted-foreground text-xs">{t.result.newRating}</span>
           <span className="text-3xl font-black tabular-nums">
             <AnimatedNumber from={result.you.ratingBefore} to={result.you.ratingAfter} delay={0.8} />
           </span>
           <RatingDelta delta={result.you.delta} />
         </Card>
         <Card className="items-center gap-2 py-5">
-          <span className="text-muted-foreground text-xs">Rang</span>
+          <span className="text-muted-foreground text-xs">{t.result.rank}</span>
           <motion.div
             initial={tierChanged ? { scale: 0 } : false}
             animate={{ scale: 1 }}
@@ -137,15 +138,15 @@ export function ResultView() {
           {tierChanged && (
             <span className={cn("flex items-center gap-1 text-xs font-semibold", result.you.delta > 0 ? "text-success" : "text-danger")}>
               <ArrowUpRight className={cn("size-3", result.you.delta < 0 && "rotate-90")} />
-              {result.you.delta > 0 ? "Aufgestiegen!" : "Abgestiegen"}
+              {result.you.delta > 0 ? t.result.promoted : t.result.demoted}
             </span>
           )}
         </Card>
         <Card className="items-center gap-1 py-5">
-          <span className="text-muted-foreground text-xs">Trefferquote</span>
+          <span className="text-muted-foreground text-xs">{t.result.accuracy}</span>
           <span className="text-3xl font-black tabular-nums">{accuracy}%</span>
           <span className="text-muted-foreground text-xs">
-            {result.you.score} von {result.you.answered} richtig
+            {fmt(t.result.correctOf, { score: result.you.score, answered: result.you.answered })}
           </span>
         </Card>
       </motion.div>
@@ -159,15 +160,15 @@ export function ResultView() {
         {cooldown > 0 ? (
           <>
             <Button size="lg" variant="secondary" disabled className="font-mono tabular-nums">
-              <Clock /> Nächstes Duell in {formatCountdown(cooldown)}
+              <Clock /> {fmt(t.result.nextDuelIn, { time: formatCountdown(cooldown) })}
             </Button>
             <Button size="lg" onClick={() => navigate("/pro")}>
-              <Crown /> Pro – unbegrenzt spielen
+              <Crown /> {t.result.proUnlimited}
             </Button>
           </>
         ) : (
           <Button size="lg" onClick={() => joinQueue(DEFAULT_MODE)}>
-            <RotateCcw /> Nächstes Duell
+            <RotateCcw /> {t.result.nextDuel}
           </Button>
         )}
         <Button
@@ -178,7 +179,7 @@ export function ResultView() {
             navigate("/stats");
           }}
         >
-          <BarChart3 /> Statistiken
+          <BarChart3 /> {t.result.stats}
         </Button>
       </motion.div>
     </motion.div>

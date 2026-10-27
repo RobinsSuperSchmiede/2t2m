@@ -3,6 +3,7 @@ import { Loader2, LogIn, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth";
+import { useI18n } from "@/lib/i18n";
 
 /** Zeigt den Inhalt nur angemeldeten Spielern, sonst einen Hinweis mit Anmelde-Button. */
 export function AuthGate({
@@ -17,6 +18,7 @@ export function AuthGate({
   children: ReactNode;
 }) {
   const { user, loading, requireLogin } = useAuth();
+  const { t } = useI18n();
   if (loading) {
     return (
       <div className="grid min-h-[50svh] place-items-center">
@@ -36,7 +38,7 @@ export function AuthGate({
       </CardHeader>
       <CardContent>
         <Button onClick={() => requireLogin()}>
-          <LogIn /> Anmelden
+          <LogIn /> {t.header.login}
         </Button>
       </CardContent>
     </Card>

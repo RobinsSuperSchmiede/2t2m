@@ -17,40 +17,31 @@ export function matchmakingRange(waitedMs: number): number {
 }
 
 // ---------------------------------------------------------------------------
+// Sprachen – Texte der Oberfläche übersetzt der Client, der Server liefert nur Ländernamen mit.
+// ---------------------------------------------------------------------------
+
+export const LANGUAGES = ["en", "de"] as const;
+export type Lang = (typeof LANGUAGES)[number];
+export const DEFAULT_LANG: Lang = "en";
+export type LocalizedText = Record<Lang, string>;
+
+// ---------------------------------------------------------------------------
 // Themen & Modi – so aufgebaut, dass später weitere Themen dazukommen können.
 // ---------------------------------------------------------------------------
 
 export type TopicId = "geography";
 export type ModeId = "geo-flags-outlines";
 
-export interface TopicInfo {
-  id: TopicId;
-  name: string;
-  description: string;
-}
-
 export interface ModeInfo {
   id: ModeId;
   topic: TopicId;
-  name: string;
-  description: string;
   available: boolean;
 }
-
-export const TOPICS: Record<TopicId, TopicInfo> = {
-  geography: {
-    id: "geography",
-    name: "Geografie",
-    description: "Flaggen, Länderumrisse und mehr.",
-  },
-};
 
 export const MODES: Record<ModeId, ModeInfo> = {
   "geo-flags-outlines": {
     id: "geo-flags-outlines",
     topic: "geography",
-    name: "Flaggen & Umrisse",
-    description: "Erkenne Länder an ihrer Flagge oder ihrem Umriss – 60 Sekunden, so viele wie möglich.",
     available: true,
   },
 };
@@ -69,20 +60,19 @@ export type TierId = "bronze" | "silver" | "gold" | "platinum" | "diamond" | "ma
 
 export interface Tier {
   id: TierId;
-  name: string;
   min: number;
   /** Untergrenze der nächsten Stufe, null bei der höchsten Stufe. */
   next: number | null;
 }
 
 export const TIERS: Tier[] = [
-  { id: "bronze", name: "Bronze", min: -Infinity, next: 900 },
-  { id: "silver", name: "Silber", min: 900, next: 1100 },
-  { id: "gold", name: "Gold", min: 1100, next: 1300 },
-  { id: "platinum", name: "Platin", min: 1300, next: 1500 },
-  { id: "diamond", name: "Diamant", min: 1500, next: 1700 },
-  { id: "master", name: "Meister", min: 1700, next: 1900 },
-  { id: "grandmaster", name: "Großmeister", min: 1900, next: null },
+  { id: "bronze", min: -Infinity, next: 900 },
+  { id: "silver", min: 900, next: 1100 },
+  { id: "gold", min: 1100, next: 1300 },
+  { id: "platinum", min: 1300, next: 1500 },
+  { id: "diamond", min: 1500, next: 1700 },
+  { id: "master", min: 1700, next: 1900 },
+  { id: "grandmaster", min: 1900, next: null },
 ];
 
 export function getTier(rating: number): Tier {
@@ -110,12 +100,15 @@ export type QuestionImage =
   | { type: "svg"; markup: string }
   | { type: "path"; d: string; viewBox: string };
 
+/** Zufällige Deko-Bilder für den animierten Hintergrund der Spielseite. */
+export type BackdropItem = QuestionImage;
+
 export interface Question {
   index: number;
   kind: QuestionKind;
-  prompt: string;
   image: QuestionImage;
-  options: string[];
+  /** Ländernamen in allen Sprachen. */
+  options: LocalizedText[];
 }
 
 export interface PublicPlayer {
@@ -191,7 +184,8 @@ export interface ServerToClientEvents {
   "game:answerResult": (payload: AnswerResultPayload) => void;
   "game:opponentScore": (payload: { score: number }) => void;
   "game:end": (payload: GameEndPayload) => void;
-  "app:error": (payload: { message: string }) => void;
+  /** `code` ist ein Fehlercode, den der Client übersetzt. */
+  "app:error": (payload: { code: string }) => void;
 }
 
 export interface ClientToServerEvents {
@@ -256,7 +250,7 @@ export interface RatingPoint {
 
 export interface CountryStat {
   code: string;
-  name: string;
+  name: LocalizedText;
   correct: number;
   total: number;
 }

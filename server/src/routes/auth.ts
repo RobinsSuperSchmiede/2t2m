@@ -19,7 +19,7 @@ authRouter.get("/config", (_req, res) => {
 authRouter.post("/google", async (req, res) => {
   const parsed = z.object({ credential: z.string().min(1) }).safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "credential fehlt" });
+    res.status(400).json({ error: "missing_credential" });
     return;
   }
   try {
@@ -28,7 +28,7 @@ authRouter.post("/google", async (req, res) => {
     res.json(toUser(user));
   } catch (err) {
     console.warn("Google-Login fehlgeschlagen:", err instanceof Error ? err.message : err);
-    res.status(401).json({ error: "Google-Anmeldung fehlgeschlagen" });
+    res.status(401).json({ error: "google_failed" });
   }
 });
 
@@ -39,7 +39,7 @@ authRouter.post("/dev", async (req, res) => {
   }
   const parsed = z.object({ name: z.string().trim().min(2).max(24) }).safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "Name muss 2–24 Zeichen lang sein" });
+    res.status(400).json({ error: "invalid_name" });
     return;
   }
   const user = await loginDev(parsed.data.name);

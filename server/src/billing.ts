@@ -13,7 +13,7 @@ export const stripe = env.STRIPE_SECRET_KEY ? new Stripe(env.STRIPE_SECRET_KEY) 
 const PRO_PRICE_CENTS = 300;
 
 function requireStripe(): Stripe {
-  if (!stripe) throw Object.assign(new Error("Zahlungen sind nicht konfiguriert"), { status: 503 });
+  if (!stripe) throw Object.assign(new Error("payments_not_configured"), { status: 503 });
   return stripe;
 }
 
@@ -67,7 +67,7 @@ billingRouter.post("/checkout", async (req, res) => {
   const client = requireStripe();
   const user = req.user!;
   if (isPro(user)) {
-    res.status(400).json({ error: "Du hast bereits Pro" });
+    res.status(400).json({ error: "already_pro" });
     return;
   }
   const customer = await ensureCustomer(client, user);
@@ -101,12 +101,12 @@ billingRouter.post("/sync", async (req, res) => {
   const client = requireStripe();
   const parsed = z.object({ sessionId: z.string().startsWith("cs_") }).safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "sessionId fehlt" });
+    res.status(400).json({ error: "missing_session" });
     return;
   }
   const session = await client.checkout.sessions.retrieve(parsed.data.sessionId, { expand: ["subscription"] });
   if (session.client_reference_id !== req.user!.id) {
-    res.status(403).json({ error: "Diese Zahlung gehört zu einem anderen Konto" });
+    res.status(403).json({ error: "foreign_payment" });
     return;
   }
   const updated =
@@ -120,7 +120,7 @@ billingRouter.post("/portal", async (req, res) => {
   const client = requireStripe();
   const user = req.user!;
   if (!user.stripeCustomerId) {
-    res.status(400).json({ error: "Kein Abo vorhanden" });
+    res.status(400).json({ error: "no_subscription" });
     return;
   }
   const portal = await client.billingPortal.sessions.create({

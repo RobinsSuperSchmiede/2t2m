@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { and, count, desc, eq, gt, inArray, or, sql } from "drizzle-orm";
 import {
+  type BackdropItem,
   DEFAULT_MODE,
   type CountryStat,
   type DashboardDetails,
@@ -19,7 +20,7 @@ import { requireAuth } from "../auth.js";
 import { db, schema } from "../db/index.js";
 import type { MatchRow } from "../db/schema.js";
 import { getOrCreateRating } from "../game/persist.js";
-import { COUNTRIES } from "../game/questions.js";
+import { COUNTRIES, OUTLINE_SIZE } from "../game/questions.js";
 
 const { matches, users, ratings, matchAnswers } = schema;
 
@@ -57,7 +58,7 @@ async function toHistoryItems(userId: string, rows: MatchRow[]): Promise<MatchHi
       endedAt: m.endedAt.toISOString(),
       opponent: {
         id: opponentId,
-        name: opponent?.name ?? "Unbekannt",
+        name: opponent?.name ?? "?",
         avatarUrl: opponent?.avatarUrl ?? null,
         rating: mine ? m.player2RatingAfter : m.player1RatingAfter,
       },
@@ -89,6 +90,21 @@ async function modeStats(userId: string, mode: ModeId): Promise<ModeStats> {
 
 /** Öffentlich, auch ohne Anmeldung sichtbar. */
 export const publicStatsRouter = Router();
+
+const BACKDROP_SIZE = 14;
+
+/** Zufällige Flaggen und Umrisse für den animierten Hintergrund. */
+publicStatsRouter.get("/backdrop", (_req, res) => {
+  const items: BackdropItem[] = [];
+  const pool = [...COUNTRIES].sort(() => Math.random() - 0.5);
+  for (const c of pool) {
+    if (items.length >= BACKDROP_SIZE) break;
+    const wantFlag = items.length % 2 === 0;
+    if (wantFlag && c.flagSvg) items.push({ type: "svg", markup: c.flagSvg });
+    else if (c.outlinePath) items.push({ type: "path", d: c.outlinePath, viewBox: `0 0 ${OUTLINE_SIZE} ${OUTLINE_SIZE}` });
+  }
+  res.json(items);
+});
 
 export const statsRouter = Router();
 statsRouter.use(requireAuth);
@@ -153,7 +169,7 @@ async function dashboardDetails(userId: string, mode: ModeId, history: MatchHist
   // Erst ab zwei Begegnungen aussagekräftig.
   const countries: CountryStat[] = countryRows
     .filter((r) => r.total >= 2)
-    .map((r) => ({ code: r.code, name: names.get(r.code) ?? r.code, correct: r.correct, total: r.total }));
+    .map((r) => ({ code: r.code, name: names.get(r.code) ?? { en: r.code, de: r.code }, correct: r.correct, total: r.total }));
   const rate = (c: CountryStat) => c.correct / c.total;
   const weakest = [...countries].sort((a, b) => rate(a) - rate(b) || b.total - a.total).filter((c) => rate(c) < 1).slice(0, 5);
   const strongest = [...countries].sort((a, b) => rate(b) - rate(a) || b.total - a.total).filter((c) => rate(c) > 0).slice(0, 5);
