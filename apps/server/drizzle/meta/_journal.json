@@ -15,6 +15,13 @@
       "when": 1793052016923,
       "tag": "0001_subscriptions",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793136332208,
+      "tag": "0002_bots",
+      "breakpoints": true
     }
   ]
 }

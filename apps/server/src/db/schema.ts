@@ -26,6 +26,8 @@ export const users = pgTable("users", {
   subscriptionStatus: text("subscription_status"),
   subscriptionPeriodEnd: timestamp("subscription_period_end", { withTimezone: true }),
   cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+  /** Ersatzgegner, wenn kein Mensch in der Warteschlange ist – taucht nicht in Ranglisten auf. */
+  isBot: boolean("is_bot").notNull().default(false),
 });
 
 /** Rating pro Spieler und Modus – jeder Modus hat seine eigene Rangliste. */

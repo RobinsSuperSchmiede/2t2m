@@ -95,6 +95,7 @@ Mit `DEV_LOGIN=true` (nur außerhalb von `NODE_ENV=production`) erscheint im Anm
 ## Spielablauf
 
 1. **Queue** – Spieler tritt der Warteschlange bei. Der erlaubte Rating-Abstand startet bei ±100 und wächst pro Sekunde Wartezeit um 20 (max. ±600).
+   Sucht sonst niemand, bekommt der Spieler nach 6–12 s einen **Bot** mit unauffälligem Namen und einem Rating knapp neben seinem eigenen (warten andere Spieler mit zu großem Abstand, erst nach 30 s). Der Bot antwortet nach 1–4 s Bedenkzeit zufällig. Das Duell zählt normal für Rating und Stundenlimit; Bots erscheinen nicht in der Rangliste. Abschalten mit `BOTS_ENABLED=false`.
 2. **Intro** – Gegner gefunden: VS-Animation, danach Countdown 3-2-1 (insgesamt 6 s).
 3. **Spiel** – 60 Sekunden, beide Spieler bekommen dieselbe Fragenfolge (Flagge oder Umriss, 4 Antworten, Ablenker bevorzugt aus derselben Region). Falsche Antwort = 1 s Sperre. Der Punktestand des Gegners wird live angezeigt.
 4. **Ergebnis** – Elo-Berechnung (K-Faktor 40 → 32 → 24 je nach Anzahl gespielter Duelle), Rangstufe, Trefferquote.

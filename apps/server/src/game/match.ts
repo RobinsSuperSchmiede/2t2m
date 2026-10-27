@@ -10,6 +10,7 @@ import {
   type PublicPlayer,
 } from "@2t2m/shared";
 import { logger } from "../logger.js";
+import { botThinkingMs } from "./bots.js";
 import { persistMatch, type AnswerRecord } from "./persist.js";
 import { QuestionSequence } from "./questions.js";
 import type { GameServer } from "./types.js";
@@ -24,6 +25,7 @@ interface PlayerState {
   lockedUntil: number;
   answers: AnswerRecord[];
   forfeited: boolean;
+  isBot: boolean;
 }
 
 export const userRoom = (userId: string) => `user:${userId}`;
@@ -43,6 +45,8 @@ export class Match {
     a: PublicPlayer,
     b: PublicPlayer,
     private readonly onFinished: (match: Match) => void,
+    /** IDs der Spieler, die vom Server gesteuert werden. */
+    botIds: ReadonlySet<string> = new Set(),
   ) {
     const now = Date.now();
     this.startsAt = now + INTRO_DURATION_MS;
@@ -54,6 +58,7 @@ export class Match {
       lockedUntil: 0,
       answers: [],
       forfeited: false,
+      isBot: botIds.has(info.id),
     });
     this.players = [init(a), init(b)];
   }
@@ -134,7 +139,23 @@ export class Match {
   }
 
   private sendQuestion(player: PlayerState) {
-    this.io.to(userRoom(player.info.id)).emit("game:question", this.questions.get(player.currentIndex).public);
+    const question = this.questions.get(player.currentIndex).public;
+    if (player.isBot) {
+      this.scheduleBotAnswer(player, question.index, question.options.length);
+      return;
+    }
+    this.io.to(userRoom(player.info.id)).emit("game:question", question);
+  }
+
+  /** Der Bot wählt nach kurzer Bedenkzeit eine zufällige Antwort. */
+  private scheduleBotAnswer(bot: PlayerState, questionIndex: number, optionCount: number) {
+    const delay = botThinkingMs();
+    if (Date.now() + delay > this.endsAt) return;
+    this.timers.push(
+      setTimeout(() => {
+        if (!this.finished) this.answer(bot.info.id, questionIndex, randomInt(optionCount));
+      }, delay),
+    );
   }
 
   private pairs(): [PlayerState, PlayerState][] {

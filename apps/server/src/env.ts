@@ -36,6 +36,11 @@ const schema = z
       .string()
       .optional()
       .transform((v) => v !== "false"),
+    /** Bot als Gegner, wenn nach kurzer Wartezeit kein Mensch gefunden wird. */
+    BOTS_ENABLED: z
+      .string()
+      .optional()
+      .transform((v) => v !== "false"),
     /** Wie lange laufende Duelle beim Herunterfahren noch zu Ende gespielt werden dürfen. */
     SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().nonnegative().default(90_000),
   })

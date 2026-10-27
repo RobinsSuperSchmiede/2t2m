@@ -73,7 +73,10 @@ async function modeStats(userId: string, mode: ModeId): Promise<ModeStats> {
     const [row] = await db
       .select({ n: count() })
       .from(ratings)
-      .where(and(eq(ratings.mode, mode), gt(ratings.games, 0), gt(ratings.rating, rating.rating)));
+      .innerJoin(users, eq(users.id, ratings.userId))
+      .where(
+        and(eq(ratings.mode, mode), gt(ratings.games, 0), gt(ratings.rating, rating.rating), eq(users.isBot, false)),
+      );
     rank = (row?.n ?? 0) + 1;
   }
   return {
@@ -261,7 +264,7 @@ publicStatsRouter.get("/leaderboard", async (req, res) => {
     })
     .from(ratings)
     .innerJoin(users, eq(users.id, ratings.userId))
-    .where(and(eq(ratings.mode, mode), gt(ratings.games, 0)))
+    .where(and(eq(ratings.mode, mode), gt(ratings.games, 0), eq(users.isBot, false)))
     .orderBy(desc(ratings.rating), desc(ratings.wins))
     .limit(100);
 
