@@ -125,7 +125,7 @@ Modi sind in `packages/shared/src/index.ts` (`MODES`) registriert; Texte dazu in
 
 ## Produktion
 
-Die App läuft als **ein Docker-Container** (API, Socket.IO-Spielserver und gebauter Client) mit PostgreSQL daneben. Empfohlenes Ziel ist **AWS ECS Fargate + Application Load Balancer + RDS** – Schritt für Schritt in [docs/deployment.md](docs/deployment.md), inklusive der Gründe, warum Vercel und Cloudflare für den Spielserver nicht passen.
+Die App läuft als **ein Docker-Container** (API, Socket.IO-Spielserver und gebauter Client) mit PostgreSQL daneben. Am einfachsten auf **Render** über die mitgelieferte [`render.yaml`](render.yaml); alternativ **AWS ECS Fargate + Application Load Balancer + RDS**. Beides Schritt für Schritt in [docs/deployment.md](docs/deployment.md), inklusive der Gründe, warum Vercel und Cloudflare für den Spielserver nicht passen.
 
 Produktionsnah lokal testen (App auf http://localhost:8080):
 

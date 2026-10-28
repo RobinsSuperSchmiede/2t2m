@@ -8,9 +8,37 @@
 | --- | --- |
 | **Vercel** | Serverless-Funktionen mit kurzer Laufzeit, keine dauerhaften WebSockets, kein gemeinsamer Speicher → der Spielserver kann dort nicht laufen. |
 | **Cloudflare** | Nur mit kompletter Neuentwicklung auf Durable Objects (kein Node-HTTP-Server, kein Socket.IO, kein `pg`). |
-| **AWS ECS Fargate** | Läuft das Docker-Image unverändert, WebSockets über den Application Load Balancer, verwaltetes Postgres über RDS. ✅ |
+| **Render** | Baut das Dockerfile direkt aus GitHub, WebSockets und Postgres inklusive, Einrichtung per `render.yaml`. ✅ Einfachster Weg – siehe [Render](#render). |
+| **AWS ECS Fargate** | Läuft das Docker-Image unverändert, WebSockets über den Application Load Balancer, verwaltetes Postgres über RDS. ✅ Mehr Kontrolle, mehr Einrichtung. |
 
-Das Image ist plattformneutral – Fly.io, Render oder Railway funktionieren mit denselben Umgebungsvariablen ebenfalls.
+Das Image ist plattformneutral – Fly.io oder Railway funktionieren mit denselben Umgebungsvariablen ebenfalls.
+
+## Render
+
+[`render.yaml`](../render.yaml) beschreibt alles: einen Web-Service aus dem `Dockerfile` (Starter-Plan, Frankfurt, genau eine Instanz) und eine PostgreSQL-17-Datenbank. Migrationen laufen beim Start des Containers.
+
+### Einrichten
+
+1. Im [Render-Dashboard](https://dashboard.render.com) **New → Blueprint** wählen und dieses GitHub-Repository verbinden.
+2. Render liest `render.yaml` und fragt nach den Werten ohne Vorgabe:
+   - `GOOGLE_CLIENT_ID` – Pflicht, ohne Google-Login kann sich in Produktion niemand anmelden.
+   - `STRIPE_SECRET_KEY` und `STRIPE_WEBHOOK_SECRET` – beide leer lassen, solange es kein Pro-Abo geben soll; sonst beide setzen (nur einer allein bricht den Start ab).
+3. **Apply** – Render legt Datenbank und Service an. `JWT_SECRET` wird automatisch erzeugt, `DATABASE_URL` aus der Datenbank übernommen.
+4. Nach dem ersten Deploy die URL des Services (z. B. `https://2t2m.onrender.com`) eintragen:
+   - **Google Cloud Console** → OAuth-Client → *Autorisierte JavaScript-Quellen*.
+   - **Stripe** (falls aktiv) → Webhook-Endpunkt `https://<url>/api/stripe/webhook` mit den Events `checkout.session.completed` und `customer.subscription.created`, `.updated`, `.deleted`, `.paused`, `.resumed`.
+
+Die öffentliche URL übernimmt der Server automatisch aus `RENDER_EXTERNAL_URL`. Mit eigener Domain (Service → *Settings → Custom Domains*) zusätzlich `CLIENT_ORIGIN=https://deine-domain.de` setzen und die Domain bei Google und Stripe eintragen.
+
+### Deployen
+
+Jeder Push auf `main` baut und deployt automatisch (abschaltbar unter *Settings → Auto-Deploy*). Render startet die neue Version, bevor die alte ein SIGTERM bekommt; die alte schickt wartende Spieler zur neuen und spielt laufende Duelle bis zu 90 Sekunden zu Ende.
+
+### Kosten und Grenzen
+
+- Web-Service *Starter* und Datenbank *Basic-256mb* kosten zusammen etwa 13 $ pro Monat (Stand der Render-Preisliste prüfen).
+- Free-Pläne sind ungeeignet: Der Service schläft nach 15 Minuten ohne Anfragen ein, die Datenbank wird nach 30 Tagen gelöscht.
+- **Nicht auf mehrere Instanzen skalieren** – Warteschlange und Duelle liegen im Arbeitsspeicher einer Instanz (siehe [Skalierung](#skalierung)). Stattdessen bei Bedarf einen größeren Plan wählen.
 
 ## Architektur
 

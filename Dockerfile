@@ -40,6 +40,8 @@ ENV NODE_ENV=production \
     # CA-Bundle für verifizierte TLS-Verbindungen zu AWS RDS (DATABASE_SSL=verify).
     NODE_EXTRA_CA_CERTS=/app/certs/rds-global-bundle.pem
 ADD --chmod=644 https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem /app/certs/rds-global-bundle.pem
+# ADD legt den Ordner nur für root lesbar an – der Server läuft aber als "node".
+RUN chmod 755 /app/certs
 
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/apps/server/package.json ./apps/server/package.json

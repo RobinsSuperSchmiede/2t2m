@@ -1,0 +1,44 @@
+# Render-Blueprint: ein Web-Service aus dem Dockerfile (API, Socket.IO-Spielserver, Client) plus Postgres.
+# Einrichtung: Render-Dashboard → New → Blueprint → dieses Repository wählen. Details: docs/deployment.md
+services:
+  - type: web
+    name: 2t2m
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    # Kein Free-Plan: Der schläft nach 15 Minuten ein und würde laufende Duelle beenden.
+    plan: starter
+    region: frankfurt
+    # Genau eine Instanz – Warteschlange und Duelle liegen im Arbeitsspeicher.
+    numInstances: 1
+    healthCheckPath: /api/health/ready
+    # Beim Deploy dürfen laufende Duelle zu Ende gespielt werden (siehe SHUTDOWN_TIMEOUT_MS).
+    maxShutdownDelaySeconds: 120
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: 2t2m-db
+          property: connectionString
+      # Interne Verbindung im privaten Netz von Render – ohne TLS.
+      - key: DATABASE_SSL
+        value: disable
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SHUTDOWN_TIMEOUT_MS
+        value: "90000"
+      # Werte im Dashboard eintragen (werden beim Anlegen abgefragt).
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+
+databases:
+  - name: 2t2m-db
+    # Kein Free-Plan: Die kostenlose Datenbank wird nach 30 Tagen gelöscht.
+    plan: basic-256mb
+    region: frankfurt
+    postgresMajorVersion: "17"
+    databaseName: duel
+    user: duel
+    ipAllowList: []

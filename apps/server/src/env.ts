@@ -20,7 +20,8 @@ const schema = z
     DATABASE_POOL_MAX: z.coerce.number().int().min(2).default(10),
     GOOGLE_CLIENT_ID: optional,
     JWT_SECRET: z.string().min(16, "JWT_SECRET muss mindestens 16 Zeichen lang sein"),
-    CLIENT_ORIGIN: z.string().default("http://localhost:5173"),
+    // Auf Render ohne eigene Domain reicht die automatisch gesetzte RENDER_EXTERNAL_URL.
+    CLIENT_ORIGIN: z.string().default(process.env.RENDER_EXTERNAL_URL || "http://localhost:5173"),
     /** Öffentliche URL der App (für Stripe-Weiterleitungen). Standard: CLIENT_ORIGIN. */
     APP_URL: optional,
     STRIPE_SECRET_KEY: optional,
