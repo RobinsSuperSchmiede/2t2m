@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { GAME_DURATION_MS, type PublicPlayer, type Question } from "@2t2m/shared";
+import type { PublicPlayer, Question } from "@2t2m/shared";
 import { Flag, Map, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlayerAvatar } from "@/components/player";
@@ -70,7 +70,7 @@ function TugOfWar({ you, rival }: { you: number; rival: number }) {
   );
 }
 
-function QuestionImage({ question }: { question: Question }) {
+export function QuestionImage({ question }: { question: Pick<Question, "image"> }) {
   if (question.image.type === "svg") {
     return (
       <motion.div
@@ -200,7 +200,7 @@ export function GameView() {
         <div className="bg-muted h-1 overflow-hidden rounded-full">
           <div
             className={cn("h-full rounded-full transition-[width] duration-100 ease-linear", critical ? "bg-danger" : "bg-foreground")}
-            style={{ width: `${(remaining / GAME_DURATION_MS) * 100}%` }}
+            style={{ width: `${(remaining / (match.settings.durationSec * 1000)) * 100}%` }}
           />
         </div>
       </div>

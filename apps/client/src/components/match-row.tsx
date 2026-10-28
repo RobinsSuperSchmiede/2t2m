@@ -55,7 +55,7 @@ function timeAgo(iso: string, lang: string, justNow: string): string {
 }
 
 export function MatchRow({ match }: { match: MatchHistoryItem }) {
-  const { t, lang } = useI18n();
+  const { t, lang, settingsText } = useI18n();
   return (
     <div className="hover:bg-accent/40 flex items-center gap-3 rounded-lg px-2 py-3 transition-colors sm:gap-4 sm:px-3">
       <OutcomeBadge outcome={match.outcome} />
@@ -65,6 +65,7 @@ export function MatchRow({ match }: { match: MatchHistoryItem }) {
           <div className="truncate text-sm font-medium">{match.opponent.name}</div>
           <div className="text-muted-foreground text-xs">
             {timeAgo(match.endedAt, lang, t.time.justNow)}
+            {` · ${settingsText(match.settings)}`}
             {match.forfeit && ` · ${t.history.forfeit}`}
           </div>
         </div>

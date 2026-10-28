@@ -38,7 +38,7 @@ function PlayerCard({ player, side, label }: { player: PublicPlayer; side: "left
 export function VersusIntro() {
   const { state } = useDuel();
   const now = useServerClock(50);
-  const { t } = useI18n();
+  const { t, fmt, settingsText } = useI18n();
   // Beim Mounten festhalten: Während der Exit-Animation rendert die Ansicht weiter, obwohl der Zustand schon zurückgesetzt sein kann.
   const [match] = useState(() => state.match!);
   const remaining = match.startsAt - now;
@@ -80,7 +80,7 @@ export function VersusIntro() {
         transition={{ delay: 1.2 }}
         className="text-muted-foreground mt-10 text-center text-sm"
       >
-        {t.intro.rules}
+        {fmt(t.intro.rules, { settings: settingsText(match.settings) })}
       </motion.p>
 
       <div className="mt-4 grid h-28 place-items-center">

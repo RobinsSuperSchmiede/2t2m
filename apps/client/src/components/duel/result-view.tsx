@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { animate, motion } from "motion/react";
 import confetti from "canvas-confetti";
-import { DEFAULT_MODE, getTier } from "@2t2m/shared";
+import { getTier } from "@2t2m/shared";
 import { ArrowUpRight, BarChart3, Clock, Crown, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -167,7 +167,7 @@ export function ResultView() {
             </Button>
           </>
         ) : (
-          <Button size="lg" onClick={() => joinQueue(DEFAULT_MODE)}>
+          <Button size="lg" onClick={() => joinQueue(match.mode, match.settings)}>
             <RotateCcw /> {t.result.nextDuel}
           </Button>
         )}

@@ -13,6 +13,7 @@ import { pingDatabase } from "./db/index.js";
 import { env } from "./env.js";
 import { logger } from "./logger.js";
 import { authRouter } from "./routes/auth.js";
+import { practiceRouter } from "./routes/practice.js";
 import { publicStatsRouter, statsRouter } from "./routes/stats.js";
 
 export interface AppState {
@@ -78,6 +79,7 @@ export function createApp(state: AppState) {
 
   app.use("/api/auth", authRouter);
   app.use("/api/billing", billingRouter);
+  app.use("/api/practice", practiceRouter);
   app.use("/api", publicStatsRouter);
   app.use("/api", statsRouter);
   app.use("/api", (_req, res) => {

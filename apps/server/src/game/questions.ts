@@ -4,7 +4,17 @@ import type { Feature, MultiPolygon, Polygon } from "geojson";
 import { feature } from "topojson-client";
 import type { GeometryCollection, Topology } from "topojson-specification";
 import * as flags from "country-flag-icons/string/3x2";
-import type { LocalizedText, Question, QuestionKind } from "@2t2m/shared";
+import { randomInt } from "node:crypto";
+import {
+  LANGUAGES,
+  type Lang,
+  type LocalizedText,
+  type PracticeQuestion,
+  type Question,
+  type QuestionImage,
+  type QuestionKind,
+  type QuestionSet,
+} from "@2t2m/shared";
 
 const require = createRequire(import.meta.url);
 const countriesData = require("world-countries/countries.json") as WorldCountry[];
@@ -75,6 +85,28 @@ function renderOutline(f: Feature<Polygon | MultiPolygon>): string | null {
   return d.replace(/-?\d+\.\d+/g, (n) => String(Math.round(Number(n) * 10) / 10));
 }
 
+/** Schlüssel der Übersetzungen in world-countries; fehlt eine Sprache dort, hilft Intl aus. */
+const TRANSLATION_KEYS: Partial<Record<Lang, string>> = { de: "deu", zh: "zho", fr: "fra", pt: "por", es: "spa" };
+
+function localizedName(c: WorldCountry): LocalizedText {
+  const name = {} as LocalizedText;
+  for (const lang of LANGUAGES) {
+    const key = TRANSLATION_KEYS[lang];
+    name[lang] =
+      lang === "en" ? c.name.common : ((key && c.translations[key]?.common) ?? displayName(lang, c.cca2) ?? c.name.common);
+  }
+  return name;
+}
+
+function displayName(lang: Lang, code: string): string | undefined {
+  try {
+    const result = new Intl.DisplayNames([lang], { type: "region", fallback: "none" }).of(code);
+    return result || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function buildCountries(): Country[] {
   const geometries = new Map<string, Feature<Polygon | MultiPolygon>>();
   const collection = feature(atlas, atlas.objects.countries);
@@ -90,7 +122,7 @@ function buildCountries(): Country[] {
       const geometry = geometries.get(c.ccn3);
       return {
         code: c.cca2,
-        name: { en: c.name.common, de: c.translations.deu?.common ?? c.name.common },
+        name: localizedName(c),
         region: c.region,
         subregion: c.subregion,
         flagSvg: flagMap[c.cca2] ?? null,
@@ -159,7 +191,10 @@ export class QuestionSequence {
   private readonly questions: ServerQuestion[] = [];
   private readonly used = new Set<string>();
 
-  constructor(seed: number) {
+  constructor(
+    seed: number,
+    private readonly set: QuestionSet = "mixed",
+  ) {
     this.rng = mulberry32(seed);
   }
 
@@ -169,7 +204,7 @@ export class QuestionSequence {
   }
 
   private generate(index: number): ServerQuestion {
-    const kind: QuestionKind = this.rng() < 0.5 ? "flag" : "outline";
+    const kind: QuestionKind = this.set === "mixed" ? (this.rng() < 0.5 ? "flag" : "outline") : this.set;
     const pool = kind === "flag" ? FLAG_POOL : OUTLINE_POOL;
     let answer = pick(this.rng, pool);
     for (let tries = 0; this.used.has(answer.code) && tries < 50; tries++) answer = pick(this.rng, pool);
@@ -181,15 +216,29 @@ export class QuestionSequence {
     return {
       correctOption,
       countryCode: answer.code,
-      public: {
-        index,
-        kind,
-        image:
-          kind === "flag"
-            ? { type: "svg", markup: answer.flagSvg! }
-            : { type: "path", d: answer.outlinePath!, viewBox: `0 0 ${OUTLINE_SIZE} ${OUTLINE_SIZE}` },
-        options: options.map((o) => o.name),
-      },
+      public: { index, kind, image: questionImage(answer, kind), options: options.map((o) => o.name) },
     };
   }
+}
+
+function questionImage(country: Country, kind: QuestionKind): QuestionImage {
+  return kind === "flag"
+    ? { type: "svg", markup: country.flagSvg! }
+    : { type: "path", d: country.outlinePath!, viewBox: `0 0 ${OUTLINE_SIZE} ${OUTLINE_SIZE}` };
+}
+
+export const COUNTRY_BY_CODE = new Map(COUNTRIES.map((c) => [c.code, c]));
+
+/** Übungsfrage zu einem bestimmten Land – null, wenn es dafür kein Bild gibt. */
+export function practiceQuestion(code: string, kind: QuestionKind): PracticeQuestion | null {
+  const country = COUNTRY_BY_CODE.get(code);
+  if (!country || !(kind === "flag" ? country.flagSvg : country.outlinePath)) return null;
+  const rng = mulberry32(randomInt(2 ** 31));
+  const options = shuffle(rng, [country, ...distractors(rng, country, 3)]);
+  return {
+    countryCode: code,
+    kind,
+    image: questionImage(country, kind),
+    options: options.map((o) => ({ code: o.code, name: o.name })),
+  };
 }

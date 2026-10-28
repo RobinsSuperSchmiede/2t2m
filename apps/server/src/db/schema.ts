@@ -69,6 +69,9 @@ export const matches = pgTable(
     /** null = Unentschieden */
     winnerId: uuid("winner_id").references(() => users.id, { onDelete: "set null" }),
     forfeit: boolean("forfeit").notNull().default(false),
+    /** Spieldauer und Fragetyp, die beide Spieler gewählt hatten. */
+    durationSec: integer("duration_sec").notNull().default(60),
+    questions: text("questions").notNull().default("mixed"),
     startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
     endedAt: timestamp("ended_at", { withTimezone: true }).notNull(),
   },
@@ -96,6 +99,22 @@ export const matchAnswers = pgTable(
     elapsedMs: integer("elapsed_ms").notNull(),
   },
   (t) => [index("match_answers_user_idx").on(t.userId), index("match_answers_match_idx").on(t.matchId)],
+);
+
+/** Antworten im Übungsmodus – zählen nicht fürs Rating, nur dafür, ob ein Fehler gelernt ist. */
+export const practiceAnswers = pgTable(
+  "practice_answers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    countryCode: text("country_code").notNull(),
+    correct: boolean("correct").notNull(),
+    answeredAt: timestamp("answered_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("practice_answers_user_idx").on(t.userId)],
 );
 
 export const usersRelations = relations(users, ({ many }) => ({

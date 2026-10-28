@@ -1,6 +1,5 @@
 // Gemeinsame Typen und Konstanten für Server und Client.
 
-export const GAME_DURATION_MS = 60_000;
 /** Zeit zwischen "Match gefunden" und Spielstart (VS-Intro + Countdown). */
 export const INTRO_DURATION_MS = 6_000;
 /** Sperrzeit nach einer falschen Antwort, damit wildes Raten sich nicht lohnt. */
@@ -20,7 +19,7 @@ export function matchmakingRange(waitedMs: number): number {
 // Sprachen – Texte der Oberfläche übersetzt der Client, der Server liefert nur Ländernamen mit.
 // ---------------------------------------------------------------------------
 
-export const LANGUAGES = ["en", "de"] as const;
+export const LANGUAGES = ["en", "de", "zh", "hi", "fr", "pt", "es"] as const;
 export type Lang = (typeof LANGUAGES)[number];
 export const DEFAULT_LANG: Lang = "en";
 export type LocalizedText = Record<Lang, string>;
@@ -51,6 +50,34 @@ export const DEFAULT_MODE: ModeId = "geo-flags-outlines";
 export function isModeId(value: unknown): value is ModeId {
   return typeof value === "string" && value in MODES;
 }
+
+// ---------------------------------------------------------------------------
+// Spiel-Einstellungen – nur Spieler mit denselben Einstellungen treffen aufeinander.
+// ---------------------------------------------------------------------------
+
+export const GAME_DURATIONS_SEC = [30, 60, 120, 300] as const;
+export type GameDurationSec = (typeof GAME_DURATIONS_SEC)[number];
+
+/** Welche Fragen vorkommen: nur Flaggen, nur Umrisse oder beides gemischt. */
+export const QUESTION_SETS = ["mixed", "flag", "outline"] as const;
+export type QuestionSet = (typeof QUESTION_SETS)[number];
+
+export interface GameSettings {
+  durationSec: GameDurationSec;
+  questions: QuestionSet;
+}
+
+export const DEFAULT_SETTINGS: GameSettings = { durationSec: 60, questions: "mixed" };
+
+export function isGameSettings(value: unknown): value is GameSettings {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    GAME_DURATIONS_SEC.includes(v.durationSec as GameDurationSec) && QUESTION_SETS.includes(v.questions as QuestionSet)
+  );
+}
+
+export const settingsKey = (s: GameSettings) => `${s.durationSec}:${s.questions}`;
 
 // ---------------------------------------------------------------------------
 // Rang-System
@@ -121,6 +148,7 @@ export interface PublicPlayer {
 export interface MatchFoundPayload {
   matchId: string;
   mode: ModeId;
+  settings: GameSettings;
   you: PublicPlayer;
   opponent: PublicPlayer;
   startsAt: number;
@@ -164,6 +192,7 @@ export interface GameStatePayload extends MatchFoundPayload {
 
 export interface QueueJoinedPayload {
   mode: ModeId;
+  settings: GameSettings;
   rating: number;
   since: number;
 }
@@ -189,7 +218,7 @@ export interface ServerToClientEvents {
 }
 
 export interface ClientToServerEvents {
-  "queue:join": (payload: { mode: ModeId }) => void;
+  "queue:join": (payload: { mode: ModeId; settings: GameSettings }) => void;
   "queue:leave": () => void;
   "game:answer": (payload: { questionIndex: number; option: number }) => void;
   "game:forfeit": () => void;
@@ -232,6 +261,7 @@ export interface ModeStats {
 export interface MatchHistoryItem {
   id: string;
   mode: ModeId;
+  settings: GameSettings;
   outcome: Outcome;
   score: number;
   opponentScore: number;
@@ -258,7 +288,9 @@ export interface CountryStat {
 /** Detaillierte Statistiken – nur für Pro-Spieler. */
 export interface DashboardDetails {
   accuracy: number | null;
+  /** Ø richtige Antworten pro Minute – vergleichbar über alle Spieldauern. */
   avgScore: number | null;
+  /** Bestes Ergebnis in einem Duell mit Standard-Dauer (60 s). */
   bestScore: number | null;
   /** Ø Zeit pro Antwort in ms. */
   avgAnswerMs: number | null;
@@ -287,6 +319,46 @@ export interface LeaderboardEntry {
   player: PublicPlayer;
   games: number;
   wins: number;
+}
+
+// ---------------------------------------------------------------------------
+// Übungsmodus (Pro) – Länder, die man falsch hatte, bis man sie sicher kann
+// ---------------------------------------------------------------------------
+
+/** So oft in Folge richtig, dann gilt ein Fehler als gelernt. */
+export const PRACTICE_STREAK_TO_LEARN = 2;
+
+export interface PracticeItem {
+  code: string;
+  kind: QuestionKind;
+  name: LocalizedText;
+  /** Wie oft insgesamt falsch beantwortet (Duelle und Übung). */
+  wrong: number;
+  /** Richtige Antworten in Folge seit dem letzten Fehler. */
+  streak: number;
+}
+
+export interface PracticeResponse {
+  items: PracticeItem[];
+  /** Frühere Fehler, die inzwischen gelernt sind. */
+  learned: number;
+}
+
+export interface PracticeQuestion {
+  countryCode: string;
+  kind: QuestionKind;
+  image: QuestionImage;
+  options: { code: string; name: LocalizedText }[];
+}
+
+export interface PracticeAnswerResponse {
+  correct: boolean;
+  /** Neuer Stand des Eintrags – null, wenn er damit gelernt ist. */
+  item: PracticeItem | null;
+}
+
+export function isQuestionKind(value: unknown): value is QuestionKind {
+  return value === "flag" || value === "outline";
 }
 
 export interface AuthConfigResponse {

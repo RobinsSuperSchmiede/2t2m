@@ -5,7 +5,12 @@ import {
   DEFAULT_MODE,
   type CountryStat,
   type DashboardDetails,
+  DEFAULT_SETTINGS,
+  type GameSettings,
+  isGameSettings,
   isModeId,
+  LANGUAGES,
+  type LocalizedText,
   type DashboardResponse,
   type HistoryResponse,
   type LeaderboardEntry,
@@ -22,10 +27,17 @@ import type { MatchRow } from "../db/schema.js";
 import { getOrCreateRating } from "../game/persist.js";
 import { COUNTRIES, OUTLINE_SIZE } from "../game/questions.js";
 
+const fallbackName = (code: string) => Object.fromEntries(LANGUAGES.map((l) => [l, code])) as LocalizedText;
+
 const { matches, users, ratings, matchAnswers } = schema;
 
 function modeFrom(value: unknown): ModeId {
   return isModeId(value) ? value : DEFAULT_MODE;
+}
+
+function settingsFrom(m: MatchRow): GameSettings {
+  const settings = { durationSec: m.durationSec, questions: m.questions };
+  return isGameSettings(settings) ? settings : DEFAULT_SETTINGS;
 }
 
 const involves = (userId: string) => or(eq(matches.player1Id, userId), eq(matches.player2Id, userId));
@@ -48,6 +60,7 @@ async function toHistoryItems(userId: string, rows: MatchRow[]): Promise<MatchHi
     return {
       id: m.id,
       mode: modeFrom(m.mode),
+      settings: settingsFrom(m),
       outcome,
       score: mine ? m.player1Score : m.player2Score,
       opponentScore: mine ? m.player2Score : m.player1Score,
@@ -120,8 +133,9 @@ async function dashboardDetails(userId: string, mode: ModeId, history: MatchHist
   const [scoreAgg, kindRows, countryRows, speedRows] = await Promise.all([
     db
       .select({
-        avg: sql<string | null>`avg(case when ${matches.player1Id} = ${userId} then ${matches.player1Score} else ${matches.player2Score} end)`,
-        best: sql<number | null>`max(case when ${matches.player1Id} = ${userId} then ${matches.player1Score} else ${matches.player2Score} end)`,
+        // Pro Minute, damit Duelle verschiedener Länge vergleichbar sind.
+        avg: sql<string | null>`avg((case when ${matches.player1Id} = ${userId} then ${matches.player1Score} else ${matches.player2Score} end) * 60.0 / ${matches.durationSec})`,
+        best: sql<number | null>`max(case when ${matches.player1Id} = ${userId} then ${matches.player1Score} else ${matches.player2Score} end) filter (where ${matches.durationSec} = 60)`,
       })
       .from(matches)
       .where(where),
@@ -172,7 +186,7 @@ async function dashboardDetails(userId: string, mode: ModeId, history: MatchHist
   // Erst ab zwei Begegnungen aussagekräftig.
   const countries: CountryStat[] = countryRows
     .filter((r) => r.total >= 2)
-    .map((r) => ({ code: r.code, name: names.get(r.code) ?? { en: r.code, de: r.code }, correct: r.correct, total: r.total }));
+    .map((r) => ({ code: r.code, name: names.get(r.code) ?? fallbackName(r.code), correct: r.correct, total: r.total }));
   const rate = (c: CountryStat) => c.correct / c.total;
   const weakest = [...countries].sort((a, b) => rate(a) - rate(b) || b.total - a.total).filter((c) => rate(c) < 1).slice(0, 5);
   const strongest = [...countries].sort((a, b) => rate(b) - rate(a) || b.total - a.total).filter((c) => rate(c) > 0).slice(0, 5);

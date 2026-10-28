@@ -66,6 +66,17 @@
   --danger: oklch(0.577 0.245 27.325);
 }
 
+/* Rangfarben – auf weißem Grund etwas dunkler, damit sie lesbar bleiben */
+:root {
+  --tier-bronze: oklch(0.55 0.1 55);
+  --tier-silver: oklch(0.56 0.015 250);
+  --tier-gold: oklch(0.64 0.14 80);
+  --tier-platinum: oklch(0.6 0.12 225);
+  --tier-diamond: oklch(0.45 0.19 264);
+  --tier-master: oklch(0.55 0.22 27);
+  --tier-grandmaster: oklch(0.5 0.22 305);
+}
+
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -92,6 +103,16 @@
   --chart-5: oklch(0.269 0 0);
   --success: oklch(0.792 0.209 151.711);
   --danger: oklch(0.704 0.191 22.216);
+}
+
+.dark {
+  --tier-bronze: oklch(0.72 0.09 55);
+  --tier-silver: oklch(0.84 0.012 250);
+  --tier-gold: oklch(0.84 0.15 85);
+  --tier-platinum: oklch(0.83 0.1 220);
+  --tier-diamond: oklch(0.64 0.17 262);
+  --tier-master: oklch(0.66 0.21 25);
+  --tier-grandmaster: oklch(0.7 0.2 305);
 }
 
 @layer base {
@@ -122,6 +143,27 @@
   width: 100%;
   height: 100%;
   display: block;
+}
+
+/* Rang-Badges: `tier-<id>` setzt die Farbe, `tier-badge` färbt Text, Rahmen und Hintergrund */
+.tier-bronze { --tier: var(--tier-bronze); }
+.tier-silver { --tier: var(--tier-silver); }
+.tier-gold { --tier: var(--tier-gold); }
+.tier-platinum { --tier: var(--tier-platinum); }
+.tier-diamond { --tier: var(--tier-diamond); }
+.tier-master { --tier: var(--tier-master); }
+.tier-grandmaster { --tier: var(--tier-grandmaster); }
+
+.tier-badge {
+  color: var(--tier);
+  border-color: color-mix(in oklch, var(--tier) 45%, transparent);
+  background-color: color-mix(in oklch, var(--tier) 12%, transparent);
+}
+/* Großmeister: Lila auf Schwarz */
+.tier-badge.tier-grandmaster {
+  color: oklch(0.86 0.12 305);
+  border-color: oklch(0.55 0.2 305 / 70%);
+  background-image: linear-gradient(135deg, oklch(0.36 0.16 305), oklch(0.13 0.03 305));
 }
 
 /* Logo: Lichtreflex wandert über den Schriftzug */

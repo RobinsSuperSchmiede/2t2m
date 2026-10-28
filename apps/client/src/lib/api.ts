@@ -5,6 +5,10 @@ import type {
   HistoryResponse,
   LeaderboardEntry,
   ModeId,
+  PracticeAnswerResponse,
+  PracticeQuestion,
+  PracticeResponse,
+  QuestionKind,
   User,
 } from "@2t2m/shared";
 
@@ -47,4 +51,12 @@ export const api = {
   syncCheckout: (sessionId: string) =>
     request<User>("/billing/sync", { method: "POST", body: JSON.stringify({ sessionId }) }),
   devTogglePro: () => request<User>("/billing/dev-toggle", { method: "POST" }),
+  practice: () => request<PracticeResponse>("/practice"),
+  practiceQuestion: (code: string, kind: QuestionKind) =>
+    request<PracticeQuestion>(`/practice/question?code=${encodeURIComponent(code)}&kind=${kind}`),
+  practiceAnswer: (countryCode: string, kind: QuestionKind, answerCode: string) =>
+    request<PracticeAnswerResponse>("/practice/answer", {
+      method: "POST",
+      body: JSON.stringify({ countryCode, kind, answerCode }),
+    }),
 };

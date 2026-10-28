@@ -17,6 +17,7 @@ import { HistoryPage } from "@/pages/history";
 import { LeaderboardPage } from "@/pages/leaderboard";
 import { PlayPage } from "@/pages/play";
 import { ProPage } from "@/pages/pro";
+import { PracticePage } from "@/pages/practice";
 import { StatsPage } from "@/pages/stats";
 import "./index.css";
 
@@ -58,6 +59,7 @@ const router = createBrowserRouter([
     children: [
       { path: "/", element: <PlayPage /> },
       { path: "/stats", element: <StatsPage /> },
+      { path: "/practice", element: <PracticePage /> },
       { path: "/history", element: <HistoryPage /> },
       { path: "/leaderboard", element: <LeaderboardPage /> },
       { path: "/pro", element: <ProPage /> },

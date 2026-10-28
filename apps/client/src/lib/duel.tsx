@@ -7,6 +7,7 @@ import type {
   AnswerResultPayload,
   ClientToServerEvents,
   GameEndPayload,
+  GameSettings,
   MatchFoundPayload,
   ModeId,
   Question,
@@ -106,7 +107,7 @@ function reducer(state: DuelState, action: Action): DuelState {
 interface DuelContextValue {
   state: DuelState;
   serverNow: () => number;
-  joinQueue: (mode: ModeId) => void;
+  joinQueue: (mode: ModeId, settings: GameSettings) => void;
   leaveQueue: () => void;
   answer: (questionIndex: number, option: number) => void;
   forfeit: () => void;
@@ -129,7 +130,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const socketRef = useRef<DuelSocket | null>(null);
   /** Modus, dem beigetreten werden soll, sobald die Verbindung steht (z. B. direkt nach dem Login). */
-  const pendingJoin = useRef<ModeId | null>(null);
+  const pendingJoin = useRef<{ mode: ModeId; settings: GameSettings } | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
   const offsetRef = useRef(0);
@@ -144,8 +145,9 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       dispatch({ type: "connected", value: true });
       // Nach einem Verbindungsabbruch (z. B. Server-Neustart) die Suche fortsetzen. Ist man dort noch
       // in der Warteschlange oder in einem Duell, ignoriert der Server den Beitritt und schickt den Stand.
-      const mode = pendingJoin.current ?? (stateRef.current.phase === "searching" ? stateRef.current.queue?.mode : null);
-      if (mode) socket.emit("queue:join", { mode });
+      const queue = stateRef.current.queue;
+      const join = pendingJoin.current ?? (stateRef.current.phase === "searching" && queue ? queue : null);
+      if (join) socket.emit("queue:join", { mode: join.mode, settings: join.settings });
       pendingJoin.current = null;
     });
     socket.on("disconnect", (reason) => {
@@ -215,10 +217,10 @@ export function DuelProvider({ children }: { children: ReactNode }) {
     () => ({
       state,
       serverNow,
-      joinQueue: (mode) => {
+      joinQueue: (mode, settings) => {
         const socket = socketRef.current;
-        if (socket?.connected) socket.emit("queue:join", { mode });
-        else pendingJoin.current = mode;
+        if (socket?.connected) socket.emit("queue:join", { mode, settings });
+        else pendingJoin.current = { mode, settings };
       },
       leaveQueue: () => socketRef.current?.emit("queue:leave"),
       answer: (questionIndex, option) => socketRef.current?.emit("game:answer", { questionIndex, option }),

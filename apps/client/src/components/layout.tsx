@@ -2,7 +2,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence } from "motion/react";
 import { DEFAULT_MODE, LANGUAGES, type Lang } from "@2t2m/shared";
-import { BarChart3, Crown, Globe, History, LogIn, LogOut, Moon, Settings, Sun, Swords, Trophy } from "lucide-react";
+import { BarChart3, Crown, Globe, History, LogIn, LogOut, Moon, Settings, Sun, Swords, Target, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +24,7 @@ import { PlayerAvatar, RankBadge } from "@/components/player";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useDuel } from "@/lib/duel";
-import { LANGUAGE_NAMES, useI18n, type Dict } from "@/lib/i18n";
+import { LANGUAGE_FLAGS, LANGUAGE_NAMES, useI18n, type Dict } from "@/lib/i18n";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
@@ -35,12 +35,13 @@ const NAV: { to: string; label: NavKey; short: NavKey; icon: typeof Swords; end:
   { to: "/stats", label: "stats", short: "statsShort", icon: BarChart3, end: false },
   { to: "/history", label: "history", short: "history", icon: History, end: false },
   { to: "/leaderboard", label: "leaderboard", short: "leaderboardShort", icon: Trophy, end: false },
+  { to: "/practice", label: "practice", short: "practice", icon: Target, end: false },
   { to: "/pro", label: "pro", short: "pro", icon: Crown, end: false },
 ];
 
 export function Logo({ className }: { className?: string }) {
   return (
-    <span className={cn("logo-shimmer text-xl font-bold tracking-tight", className)}>2T2M Battle</span>
+    <span className={cn("logo-shimmer text-xl font-bold tracking-tight whitespace-nowrap", className)}>2T2M Battle</span>
   );
 }
 
@@ -63,11 +64,15 @@ function PreferenceItems() {
         </DropdownMenuSubTrigger>
         <DropdownMenuSubContent>
           <DropdownMenuRadioGroup value={lang} onValueChange={(l) => setLang(l as Lang)}>
-            {LANGUAGES.map((l) => (
-              <DropdownMenuRadioItem key={l} value={l}>
-                {LANGUAGE_NAMES[l]}
-              </DropdownMenuRadioItem>
-            ))}
+            {LANGUAGES.map((l) => {
+              const Flag = LANGUAGE_FLAGS[l];
+              return (
+                <DropdownMenuRadioItem key={l} value={l}>
+                  <Flag aria-hidden className="h-3 w-[18px] shrink-0 rounded-[2px] shadow-[0_0_0_1px_rgb(0_0_0/0.15)]" />
+                  {LANGUAGE_NAMES[l]}
+                </DropdownMenuRadioItem>
+              );
+            })}
           </DropdownMenuRadioGroup>
         </DropdownMenuSubContent>
       </DropdownMenuSub>
@@ -107,7 +112,7 @@ function UserMenu() {
 
   return (
     <>
-      {dashboard.data && <RankBadge rating={dashboard.data.stats.rating} className="hidden sm:inline-flex" />}
+      {dashboard.data && <RankBadge rating={dashboard.data.stats.rating} className="hidden sm:inline-flex" showTiers />}
       {user.pro ? (
         <Badge variant="secondary" className="gap-1">
           <Crown className="size-3" /> Pro
@@ -176,15 +181,18 @@ export function AppLayout() {
                 key={to}
                 to={to}
                 end={end}
+                aria-label={t.nav[label]}
+                title={t.nav[label]}
                 className={({ isActive }) =>
                   cn(
-                    "text-muted-foreground hover:text-foreground flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    "text-muted-foreground hover:text-foreground flex items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium transition-colors lg:px-3",
                     isActive && "bg-accent text-foreground",
                   )
                 }
               >
                 <Icon className="size-4" />
-                {t.nav[label]}
+                {/* Auf mittleren Breiten nur Icons, damit Logo und Menü nebeneinander passen */}
+                <span className="hidden lg:inline">{t.nav[label]}</span>
               </NavLink>
             ))}
           </nav>
@@ -207,7 +215,7 @@ export function AppLayout() {
       {/* Tab-Leiste für Smartphones – während des Duells ausgeblendet */}
       {!inGame && (
         <nav className="bg-background/95 fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
-          <div className="grid grid-cols-5">
+          <div className="grid grid-cols-6">
             {NAV.map(({ to, short, icon: Icon, end }) => (
               <NavLink
                 key={to}

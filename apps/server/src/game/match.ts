@@ -1,9 +1,9 @@
 import { randomInt, randomUUID } from "node:crypto";
 import {
-  GAME_DURATION_MS,
   INTRO_DURATION_MS,
   WRONG_ANSWER_PENALTY_MS,
   type GameEndPayload,
+  type GameSettings,
   type GameStatePayload,
   type MatchFoundPayload,
   type ModeId,
@@ -35,13 +35,14 @@ export class Match {
   readonly startsAt: number;
   readonly endsAt: number;
   private readonly players: [PlayerState, PlayerState];
-  private readonly questions = new QuestionSequence(randomInt(2 ** 31));
+  private readonly questions: QuestionSequence;
   private readonly timers: NodeJS.Timeout[] = [];
   private finished = false;
 
   constructor(
     private readonly io: GameServer,
     readonly mode: ModeId,
+    readonly settings: GameSettings,
     a: PublicPlayer,
     b: PublicPlayer,
     private readonly onFinished: (match: Match) => void,
@@ -50,7 +51,8 @@ export class Match {
   ) {
     const now = Date.now();
     this.startsAt = now + INTRO_DURATION_MS;
-    this.endsAt = this.startsAt + GAME_DURATION_MS;
+    this.endsAt = this.startsAt + settings.durationSec * 1000;
+    this.questions = new QuestionSequence(randomInt(2 ** 31), settings.questions);
     const init = (info: PublicPlayer): PlayerState => ({
       info,
       score: 0,
@@ -169,6 +171,7 @@ export class Match {
     return {
       matchId: this.id,
       mode: this.mode,
+      settings: this.settings,
       you: me.info,
       opponent: opponent.info,
       startsAt: this.startsAt,
@@ -194,6 +197,7 @@ export class Match {
       const results = await persistMatch({
         id: this.id,
         mode: this.mode,
+        settings: this.settings,
         startedAt: new Date(this.startsAt),
         endedAt: new Date(),
         players: [toFinished(this.players[0]), toFinished(this.players[1])],

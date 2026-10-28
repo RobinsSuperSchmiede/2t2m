@@ -39,6 +39,7 @@ export function ProPage() {
     { label: t.pro.rowRanked, free: t.pro.rowRankedFree, pro: t.pro.rowRankedPro },
     { label: t.pro.rowRating, free: true, pro: true },
     { label: t.pro.rowStats, free: false, pro: true },
+    { label: t.pro.rowPractice, free: false, pro: true },
     { label: t.pro.rowAdFree, free: false, pro: true },
   ];
   const formatDate = (iso: string) => new Intl.DateTimeFormat(lang, { dateStyle: "long" }).format(new Date(iso));

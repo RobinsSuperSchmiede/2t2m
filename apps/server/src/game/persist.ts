@@ -1,5 +1,5 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { STARTING_RATING, type ModeId, type Outcome } from "@2t2m/shared";
+import { STARTING_RATING, type GameSettings, type ModeId, type Outcome } from "@2t2m/shared";
 import { db, schema, type Tx } from "../db/index.js";
 import { ratingDelta } from "./elo.js";
 
@@ -34,6 +34,7 @@ export interface FinishedPlayer {
 export interface FinishedMatch {
   id: string;
   mode: ModeId;
+  settings: GameSettings;
   startedAt: Date;
   endedAt: Date;
   players: [FinishedPlayer, FinishedPlayer];
@@ -115,6 +116,8 @@ export async function persistMatch(match: FinishedMatch): Promise<[PersistedPlay
       player2RatingAfter: results[1].ratingAfter,
       winnerId,
       forfeit: a.forfeited || b.forfeited,
+      durationSec: match.settings.durationSec,
+      questions: match.settings.questions,
       startedAt: match.startedAt,
       endedAt: match.endedAt,
     });

@@ -1,5 +1,14 @@
 import { randomInt } from "node:crypto";
-import { FREE_GAME_COOLDOWN_MS, isModeId, matchmakingRange, type ModeId, type PublicPlayer } from "@2t2m/shared";
+import {
+  FREE_GAME_COOLDOWN_MS,
+  isGameSettings,
+  isModeId,
+  matchmakingRange,
+  settingsKey,
+  type GameSettings,
+  type ModeId,
+  type PublicPlayer,
+} from "@2t2m/shared";
 import { inArray } from "drizzle-orm";
 import { isPro, nextGameAt } from "../account.js";
 import { findUser, userIdFromCookieHeader } from "../auth.js";
@@ -14,6 +23,7 @@ import type { GameServer, GameSocket } from "./types.js";
 interface QueueEntry {
   player: PublicPlayer;
   mode: ModeId;
+  settings: GameSettings;
   joinedAt: number;
   /** Ab dieser Wartezeit gibt es einen Bot, falls sonst niemand in der Warteschlange ist. */
   botAfterMs: number;
@@ -27,6 +37,8 @@ const BOT_WAIT_MIN_MS = 6_000;
 const BOT_WAIT_MAX_MS = 12_000;
 /** Warten andere Spieler mit zu großem Rating-Abstand, gibt es erst später einen Bot. */
 const BOT_WAIT_WITH_OTHERS_MS = 30_000;
+
+const queueKey = (e: QueueEntry) => `${e.mode}|${settingsKey(e.settings)}`;
 
 export class Matchmaker {
   private readonly queue = new Map<string, QueueEntry>();
@@ -91,12 +103,12 @@ export class Matchmaker {
     // Laufendes Match nach Reload/Verbindungsabbruch wieder aufnehmen.
     this.matchesByUser.get(userId)?.sendState(userId);
     const queued = this.queue.get(userId);
-    if (queued) socket.emit("queue:joined", { mode: queued.mode, rating: queued.player.rating, since: queued.joinedAt });
+    if (queued) socket.emit("queue:joined", this.joinedPayload(queued));
 
     let lastJoinAttempt = 0;
     socket.on("queue:join", async (payload) => {
       try {
-        if (!isModeId(payload?.mode)) return;
+        if (!isModeId(payload?.mode) || !isGameSettings(payload.settings)) return;
         const now = Date.now();
         if (now - lastJoinAttempt < JOIN_THROTTLE_MS) return;
         lastJoinAttempt = now;
@@ -120,12 +132,13 @@ export class Matchmaker {
         if (this.isBusy(userId)) return;
         const entry: QueueEntry = {
           mode: payload.mode,
+          settings: { durationSec: payload.settings.durationSec, questions: payload.settings.questions },
           joinedAt: Date.now(),
           botAfterMs: randomInt(BOT_WAIT_MIN_MS, BOT_WAIT_MAX_MS),
           player: { id: user.id, name: user.name, avatarUrl: user.avatarUrl, rating: rating.rating },
         };
         this.queue.set(userId, entry);
-        this.io.to(userRoom(userId)).emit("queue:joined", { mode: entry.mode, rating: entry.player.rating, since: entry.joinedAt });
+        this.io.to(userRoom(userId)).emit("queue:joined", this.joinedPayload(entry));
         this.tick();
       } catch (err) {
         logger.error({ err, userId }, "Beitritt zur Warteschlange fehlgeschlagen");
@@ -155,18 +168,23 @@ export class Matchmaker {
     });
   }
 
+  private joinedPayload(entry: QueueEntry) {
+    return { mode: entry.mode, settings: entry.settings, rating: entry.player.rating, since: entry.joinedAt };
+  }
+
   private isBusy(userId: string) {
     return this.matchesByUser.has(userId) || this.queue.has(userId) || this.pendingBot.has(userId);
   }
 
   private tick() {
     if (this.draining) return;
-    // Pro Modus getrennt paaren; wer am längsten wartet, wird zuerst bedient.
-    const byMode = new Map<ModeId, QueueEntry[]>();
+    // Pro Modus und Einstellungen getrennt paaren; wer am längsten wartet, wird zuerst bedient.
+    const byMode = new Map<string, QueueEntry[]>();
     for (const entry of this.queue.values()) {
-      const list = byMode.get(entry.mode) ?? [];
+      const key = queueKey(entry);
+      const list = byMode.get(key) ?? [];
       list.push(entry);
-      byMode.set(entry.mode, list);
+      byMode.set(key, list);
     }
     for (const waiting of byMode.values()) {
       waiting.sort((a, b) => a.joinedAt - b.joinedAt);
@@ -180,7 +198,7 @@ export class Matchmaker {
     const now = Date.now();
     const entries = [...this.queue.values()];
     for (const entry of entries) {
-      const othersWaiting = entries.some((e) => e !== entry && e.mode === entry.mode && this.queue.has(e.player.id));
+      const othersWaiting = entries.some((e) => e !== entry && queueKey(e) === queueKey(entry) && this.queue.has(e.player.id));
       const wait = othersWaiting ? BOT_WAIT_WITH_OTHERS_MS : entry.botAfterMs;
       if (now - entry.joinedAt >= wait) void this.startBotMatch(entry);
     }
@@ -204,7 +222,7 @@ export class Matchmaker {
         this.queue.set(userId, entry);
         return;
       }
-      this.startMatch(entry.mode, entry.player, bot, bot);
+      this.startMatch(entry.mode, entry.settings, entry.player, bot, bot);
     } catch (err) {
       logger.error({ err, userId }, "Bot-Duell konnte nicht gestartet werden");
       if (this.pendingBot.delete(userId) && !this.draining) this.queue.set(userId, { ...entry, joinedAt: Date.now() });
@@ -234,17 +252,18 @@ export class Matchmaker {
         matched.add(best.player.id);
         this.queue.delete(a.player.id);
         this.queue.delete(best.player.id);
-        this.startMatch(a.mode, a.player, best.player);
+        this.startMatch(a.mode, a.settings, a.player, best.player);
       }
     }
   }
 
   /** `bot` ist optional der vom Server gesteuerte Gegner von `a`. */
-  private startMatch(mode: ModeId, a: PublicPlayer, b: PublicPlayer, bot: PublicPlayer | null = null) {
+  private startMatch(mode: ModeId, settings: GameSettings, a: PublicPlayer, b: PublicPlayer, bot: PublicPlayer | null = null) {
     const humans = bot ? [a] : [a, b];
     const match = new Match(
       this.io,
       mode,
+      settings,
       a,
       b,
       (m) => {
@@ -263,7 +282,7 @@ export class Matchmaker {
     this.activeMatches.add(match);
     for (const p of humans) this.matchesByUser.set(p.id, match);
     match.start();
-    logger.info({ matchId: match.id, mode, players: match.playerIds, bot: Boolean(bot) }, "Duell gestartet");
+    logger.info({ matchId: match.id, mode, settings, players: match.playerIds, bot: Boolean(bot) }, "Duell gestartet");
     // Ab Matchbeginn zählt das Duell für das Stundenlimit.
     const now = Date.now();
     for (const [id, at] of this.recentStarts) if (at + FREE_GAME_COOLDOWN_MS < now) this.recentStarts.delete(id);
